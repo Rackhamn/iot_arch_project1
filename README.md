@@ -9,7 +9,7 @@ We are 8 members.
 * Gabriel xxx (yyy)
 ### Malmö:
 * Anton Gobbert (pankakan)
-* Martin xxx (yyy)
+* Martin af Uhr (stormtomten)
 * Kerry xxx (yyy)
 * Denize S. (QueDe)
 
