@@ -27,3 +27,28 @@ Plans and details to follow
 [Link Example](http://google.com)  
 [Github .md helper](https://gist.github.com/allysonsilva/85fff14a22bbdf55485be947566cc09e)  
 
+```mermaid
+graph TD
+    Server[Server] -->|TCP/IPV4/6| Box
+    Server --> DB[Database]
+    Box --> A1[a]
+    Box --> A2[a]
+    Box --> A3[a]
+    Box --> P1[P]
+    Box --> P2[P]
+    A1 --> P1
+    A1 --> P2
+    A2 --> P1
+    A2 --> P2
+    A3 --> P1
+    A3 --> P2
+    subgraph lägenheten
+        Box
+        A1
+        A2
+        A3
+        P1
+        P2
+    end
+```
+
