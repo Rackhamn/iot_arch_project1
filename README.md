@@ -18,6 +18,12 @@ Designing a system assisting housekeeping and supervisors with post-checkout con
 ## Plan
 Initial Meeting: 2025-01-21, 17:00 _done_    
 Meeting log: https://docs.google.com/document/d/1dKvJOzCxKPIAF0xGJFeyn81T_Q298DL61lQWgLDmnBw/edit?usp=sharing  
+
+### Basic Architecture Idea:  
+A main server with a database + user website.  
+A Mesh network of pico connected active RFID tags.  
+A set of passive RFID tags read by the mesh network.  
+A Reader/Writer pair for RFID tags.  
   
 ## Details
 Plans and details to follow
