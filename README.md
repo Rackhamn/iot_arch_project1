@@ -51,3 +51,5 @@ graph TD
     end
 ```
 
+### Initial Whiteboard Sketch
+![Whiteboard Sketch](https://github.com/Rackhamn/iot_arch_project1/blob/main/Resources/Screenshot%202025-01-23%20094007.png)
