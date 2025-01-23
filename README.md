@@ -10,7 +10,7 @@ We are 7 members.
 ### Malmö:
 * Martin af Uhr (stormtomten)
 * Kerry xxx (yyy)
-* Denize S. (QueDe)
+* Denize S. (Que-ctrl)
 
 # Project Information
 Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals.
