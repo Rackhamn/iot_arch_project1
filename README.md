@@ -16,8 +16,8 @@ We are 7 members.
 Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals.
   
 ## Plan
-Meeting 1: 2025-01-21, 17:00 _done_
-More meeting times etc...
+Initial Meeting: 2025-01-21, 17:00 _done_    
+Meeting log: https://docs.google.com/document/d/1dKvJOzCxKPIAF0xGJFeyn81T_Q298DL61lQWgLDmnBw/edit?usp=sharing  
   
 ## Details
 Plans and details to follow
