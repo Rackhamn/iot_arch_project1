@@ -21,7 +21,8 @@ Meeting log: https://docs.google.com/document/d/1dKvJOzCxKPIAF0xGJFeyn81T_Q298DL
 
 ### Basic Architecture Idea:  
 A main server with a database + user website.  
-A Mesh network of pico connected active RFID tags.  
+A Mesh network of pico connected active RFID tags. 
+It should configure itself and choose one as Master (that interacts with the server and runs commands)   
 A set of passive RFID tags read by the mesh network.  
 A Reader/Writer pair for RFID tags.  
   
