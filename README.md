@@ -34,13 +34,19 @@ Plans and details to follow
 
 ```mermaid
 graph TD
-    Server[Server] -->|TCP/IPV4/6| Box
+    Server[Server] --> |TCP/IPV4/6| Master
     Server --> DB[Database]
-    Box --> A1((a))
-    Box --> A2((a))
-    Box --> A3((a))
-    Box --> P1((p))
-    Box --> P2((p))
+    Server --> Anal[Analytics]
+    DB --> Server
+    DB --> Anal
+    Anal --> Website[Website]
+    Server --> Website
+    Website --> Server
+    Master --> A1((Active Tag))
+    Master --> A2((Active Tag))
+    Master --> A3((Active Tag))
+    Master --> P1((Passive Tag))
+    Master --> P2((Passive Tag))
     A1 --> P1
     A1 --> P2
     A2 --> P1
@@ -48,7 +54,7 @@ graph TD
     A3 --> P1
     A3 --> P2
     subgraph lägenheten
-        Box
+        Master
         A1
         A2
         A3
