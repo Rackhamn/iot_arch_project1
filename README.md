@@ -4,9 +4,9 @@ For our 3-month long IoT Architecture course at Jensen YH (2025)
 We are 7 members.  
 ### Stockholm:
 * Carl Blumenthal (Rackhamn)
-* Mojtaba Mohseni (xxx)
-* Swathi xxx (yyy)
-* Gabriel xxx (yyy)
+* Mojtaba Mohseni (Mohsen-png)
+* Swathi xxx (swati72-t2)
+* Gabriel xxx (Gabbemannen00)
 ### Malmö:
 * Martin af Uhr (stormtomten)
 * Kerry xxx (yyy)
