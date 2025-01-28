@@ -28,13 +28,13 @@ A Reader/Writer pair for RFID tags.
 
 
 ### Update:  
-We are going to have to change our original architecture idea slightly.  
-Instead of having an active RF reader in every room that communicates with the RFID tags, we are going to have a RFID reader module that a person can use to scan all the tags in a room.  
-Each read will be sent through our mesh network that in turn speaks to the server.
+_We are going to have to change our original architecture idea slightly._
+_Instead of having an active RF reader in every room that communicates with the RFID tags, we are going to have a RFID reader module that a person can use to scan all the tags in a room._
+_Each read will be sent through our mesh network that in turn speaks to the server._
 
-It might be best to have a split architecture.  
-One with the basic passive RFID tags where we use a reader module.  
-One with the active RFID tags that we try to read once every N seconds. Need to find a working antenna though + think about power consumtion.  
+_It might be best to have a split architecture._  
+_One with the basic passive RFID tags where we use a reader module._  
+_One with the active RFID tags that we try to read once every N seconds. Need to find a working antenna though + think about power consumtion._  
   
 ## Details
 Plans and details to follow
