@@ -1,4 +1,4 @@
-# iot_arch_project1
+# JATSS - Jensen Asset Tracking Software Solution
 
 For our 3-month long IoT Architecture course at Jensen YH (2025)  
 We are 7 members.  
