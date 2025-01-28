@@ -42,11 +42,10 @@ Plans and details to follow :smiley:
 ## Resources
 [Link Example](http://google.com)  
 [Github .md helper](https://gist.github.com/allysonsilva/85fff14a22bbdf55485be947566cc09e)  
-
-### TODO:  
-  Server-Master Sequence Diagram  
-  Mesh Sequence Diagram  
-
+  
+<br/><br/><br/><br/>
+  
+### Architecture Diagrams:  
 
 ```mermaid
 graph TD
@@ -102,6 +101,9 @@ graph TD
     end
 ```
 
+<br/><br/>
+---  
+
 ### Basic Handheld Reader - Mesh - Server (RMS) Sequence
 ```mermaid
 sequenceDiagram
@@ -115,6 +117,7 @@ sequenceDiagram
     Note left of Reader: Now Display Info on Reader Screen
 ```
 
+<br/><br/>
 ### First Approximation of RMS Packet Payload
 ```mermaid
 ---
@@ -136,6 +139,9 @@ config:
     152-167: "Block Length : 16b"
     168-191: "Data (Var Len) : Nb"
 ```
+
+<br/><br/>
+---  
 
 ### RFID Reader States
 ```mermaid
@@ -171,6 +177,10 @@ stateDiagram-v2
         Sleeping --> Ready : Wake Up
     }
 ```
+
+<br/><br/>
+
+---  
 
 ### Initial Whiteboard Sketch
 ![Whiteboard Sketch](https://github.com/Rackhamn/iot_arch_project1/blob/main/Resources/Screenshot%202025-01-23%20094007.png)
