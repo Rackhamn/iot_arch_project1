@@ -27,7 +27,7 @@ A set of passive RFID tags read by the mesh network.
 A Reader/Writer pair for RFID tags.  
 
 
-Update:  
+### Update:  
 We are going to have to change our original architecture idea slightly.  
 Instead of having an active RF reader in every room that communicates with the RFID tags, we are going to have a RFID reader module that a person can use to scan all the tags in a room.  
 Each read will be sent through our mesh network that in turn speaks to the server.
