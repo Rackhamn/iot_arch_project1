@@ -43,9 +43,15 @@ Plans and details to follow
 [Link Example](http://google.com)  
 [Github .md helper](https://gist.github.com/allysonsilva/85fff14a22bbdf55485be947566cc09e)  
 
+### TODO:  
+  Server-Master Sequence Diagram  
+  Mesh Sequence Diagram  
+
+
 ```mermaid
 graph TD
     Server[Server] --> |TCP/IPV4/6| Master
+    Server --> |TCP/IPV4/6| Master2
     Server --> DB[Database]
     Server --> Anal[Analytics]
     DB --> Server
@@ -71,6 +77,28 @@ graph TD
         A3
         P1
         P2
+  end
+
+  Master2 --> Mesh2_1
+  Master2 --> Mesh2_2
+  Master2 --> Mesh2_3
+  Mesh2_1 --> Mesh2_2
+  Mesh2_2 --> Mesh2_3
+  Mesh2_3 --> Mesh2_1
+  PT1 --> Reader
+  PT2 --> Reader
+  PT3 --> Reader
+  PT4 --> Reader
+  Reader --> Mesh2_1
+  subgraph lägenheten2
+      Master2
+      Mesh2_1
+      Mesh2_2
+      Mesh2_3
+      PT1
+      PT2
+      PT3
+      PT4
     end
 ```
 
