@@ -102,5 +102,18 @@ graph TD
     end
 ```
 
+### Basic Handheld Reader - Mesh - Server Sequence
+```mermaid
+sequenceDiagram
+    Note left of Reader: Read Tag Info Successfully
+    Note left of Mesh: Move Packet Payload To Master Mesh
+    Reader ->> Mesh: [ Tag ID + Info ]
+    Mesh -->> Server: [ Tag ID + Info ] + [ Mesh Info ]
+    Note right of Server: Fetch DB info from TAG + Mesh info
+    Server --x Mesh: [ Tag DB Info ] + [ Reader ID ]
+    Mesh -x Reader: [ Tag DB Info ]
+    Note left of Reader: Now Display Info on Reader Screen
+```
+
 ### Initial Whiteboard Sketch
 ![Whiteboard Sketch](https://github.com/Rackhamn/iot_arch_project1/blob/main/Resources/Screenshot%202025-01-23%20094007.png)
