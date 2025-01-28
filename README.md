@@ -13,7 +13,7 @@ We are 7 members.
 * Denize S. (Que-ctrl)
 
 # Project Information
-Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals.
+_Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals._
   
 ## Plan
 Initial Meeting: 2025-01-21, 17:00 _done_    
