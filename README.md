@@ -136,5 +136,41 @@ config:
     152-167: "Block Length : 16b"
     168-191: "Data (Var Len) : Nb"
 ```
+
+### RFID Reader States
+```mermaid
+stateDiagram-v2
+    [*] --> OFF
+    OFF --> Booting : Power On
+    Booting --> Idle : Boot Complete
+    Idle --> Connecting : Connect to Mesh/Server
+    Connecting --> Connected : Connection Successful
+    Connecting --> Idle : Connection Failed
+    Connected --> Scanning : Scan for Tags
+    Scanning --> Verifying : Tag Scanned
+    Verifying --> FetchingDBInfo : Verification OK
+    Verifying --> Error : Verification Failed
+    FetchingDBInfo --> StoringDBInfo : DB Info Fetched
+    FetchingDBInfo --> Error : DB Fetch Failed
+    StoringDBInfo --> Idle : Info Stored
+    Idle --> LoadingDBInfo : Load Stored DB Info
+    LoadingDBInfo --> DisplayingDBInfo : Info Loaded
+    DisplayingDBInfo --> Idle : Display Complete
+    Connected --> Error : Connection Lost
+    Error --> Idle : Reset to Idle
+    Idle --> OFF : Power Off
+    [*] --> Crash : Unexpected Error
+    Crash --> OFF : Restart
+
+    state Connected {
+        [*] --> Ready
+        Ready --> Syncing : Sync with Server
+        Syncing --> Ready : Sync Complete
+        Syncing --> Error : Sync Failed
+        Ready --> Sleeping : Low Power Mode
+        Sleeping --> Ready : Wake Up
+    }
+```
+
 ### Initial Whiteboard Sketch
 ![Whiteboard Sketch](https://github.com/Rackhamn/iot_arch_project1/blob/main/Resources/Screenshot%202025-01-23%20094007.png)
