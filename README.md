@@ -102,7 +102,7 @@ graph TD
     end
 ```
 
-### Basic Handheld Reader - Mesh - Server Sequence
+### Basic Handheld Reader - Mesh - Server (RMS) Sequence
 ```mermaid
 sequenceDiagram
     Note left of Reader: Read Tag Info Successfully
@@ -115,5 +115,26 @@ sequenceDiagram
     Note left of Reader: Now Display Info on Reader Screen
 ```
 
+### First Approximation of RMS Packet Payload
+```mermaid
+---
+title: "Example RMS Packet Payload"
+config:
+    packet:
+        rowHeight: 32
+        bitWidth: 16
+        bitsPerRow: 64
+        showBits: true
+        paddingX: 10
+        paddingY: 5
+---
+ packet-beta
+    0-63: "Hashed ID : 64b"
+    64-127: "Payload Size : 64b" 
+    128-143: "Num Blocks : 16b"
+    144-151: "Block ID : 8b"
+    152-167: "Block Length : 16b"
+    168-191: "Data (Var Len) : Nb"
+```
 ### Initial Whiteboard Sketch
 ![Whiteboard Sketch](https://github.com/Rackhamn/iot_arch_project1/blob/main/Resources/Screenshot%202025-01-23%20094007.png)
