@@ -131,6 +131,22 @@ sequenceDiagram
 ```basic
 0      64     128    144    152    168    192    225    255
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
+
+struct rms_block_64b_s {
+  uint8_t id;
+  uint16_t size;
+  uint8_t * data;
+  uint32_t crc32;
+};
+
+struct rms_payload_64b_s {
+  uint64_t hash_id;
+  uint64_t payload_size_bytes;
+  uint16_t num_blocks;
+  struct rms_block_64b_s * blocks;
+  uint8_t * zero_padding;
+};
+
 ```
 
 ```mermaid
