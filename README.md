@@ -49,16 +49,21 @@ Plans and details to follow :smiley:
 
 ```mermaid
 graph TD
-    Server[Server] --> |TCP/IPV4/6| Master
-    Server --> |TCP/IPV4/6| Master2
-    Server --> DB[Database]
-    Server --> Anal[Analytics]
-    DB --> Server
-    DB --> Anal
+    ServerCache@{ shape: docs, label: "Cache<br/><p style="color: orange;"><b><i>Redis</i></b></p>" } <--> Server
+    Server@{ shape: docs, label: "Server Backend<br/><p style="color: orange;"><b><i>Parallel Job Pool</i></b></p>" } <--> |TCP/IPV4/6| Master
+    Server <--> |TCP/IPV4/6| Master2
+    Server <--> DB@{ shape: cyl, label: "Database<br/><p style="color: orange;"><b><i>SQLite3</i></b></p>" }
+    Server --> Anal@{ shape: processes, label: "Analytics<br/><p style="color: orange;"><b><i>Grafana?</i></b></p>" }
+    DB <--> BD2@{ shape: cyl, label: "Parity Copy<br/>Database" }
+
     Anal --> Website[Website]
-    Server --> Website
-    Website --> Server
-    Master --> A1((Active Tag))
+    %% Website <--> User@{ shape: hex, label: "User<br/><p style="color: orange;"><b><i>APT Owner</i></b></p>"}
+
+    Server <--> Logger@{ shape: docs, label: "Log Service<br/><p style="color: orange;"><b><i>+ Watchdog<br/>+ Wireshark</i></b></p>" }
+    Server <--> ServerHTML@{ shape: docs, label: "HTML Server<br/><p style="color: orange;"><b><i>Apache / nginx</i></b></p>" }
+    ServerHTML <--> Website
+    
+    Master <--> A1(Mesh AP)
     Master --> A2((Active Tag))
     Master --> A3((Active Tag))
     Master --> P1((Passive Tag))
@@ -69,35 +74,37 @@ graph TD
     A2 --> P2
     A3 --> P1
     A3 --> P2
-    subgraph lägenheten
-        Master
+    subgraph APT_1
+        Master(Master<br/>Mesh AP)
         A1
         A2
         A3
         P1
         P2
-  end
+    end
 
-  Master2 --> Mesh2_1
-  Master2 --> Mesh2_2
-  Master2 --> Mesh2_3
-  Mesh2_1 --> Mesh2_2
-  Mesh2_2 --> Mesh2_3
-  Mesh2_3 --> Mesh2_1
-  PT1 --> Reader
-  PT2 --> Reader
-  PT3 --> Reader
-  PT4 --> Reader
-  Reader --> Mesh2_1
-  subgraph lägenheten2
-      Master2
-      Mesh2_1
-      Mesh2_2
-      Mesh2_3
-      PT1
-      PT2
-      PT3
-      PT4
+  Master2 <--> Mesh2_1
+  Master2 <--> Mesh2_2
+  Master2 <--> Mesh2_3
+  Mesh2_1 <--> Mesh2_2
+  Mesh2_2 <--> Mesh2_3
+  Mesh2_3 <--> Mesh2_1
+  PT1 <--> Reader
+  PT2 <--> Reader
+  PT3 <--> Reader
+  PT4 <--> Reader
+
+  %% Housekeeping@{ shape: hex, label: "Housekeeping<br/><p style="color: orange;"><b><i>Security</i></b></p>"} --> Reader
+  Reader(RFID<br/>Interface<br/>Module<br/><p style="color: orange;"><b><i>MFRC522</i></b></p>) --> Mesh2_1
+  subgraph APT_2
+      Master2(Master<br/>Mesh AP)
+      Mesh2_1(Nearest<br/>Mesh AP)
+      Mesh2_2(Mesh AP)
+      Mesh2_3(Mesh AP)
+      PT1((Passive Tag))
+      PT2((Passive Tag))
+      PT3((Passive Tag))
+      PT4((Active Tag))
     end
 ```
 
@@ -108,17 +115,22 @@ graph TD
 ```mermaid
 sequenceDiagram
     Note left of Reader: Read Tag Info Successfully
-    Note left of Mesh: Move Packet Payload To Master Mesh
+    Note left of Mesh: Move Packet Payload<br/>Through Mesh Network<br/>To Master Mesh
     Reader ->> Mesh: [ Tag ID + Info ]
     Mesh -->> Server: [ Tag ID + Info ] + [ Mesh Info ]
-    Note right of Server: Fetch DB info from TAG + Mesh info
+    Note right of Server: Fetch DB info from TAG + Mesh info<br/>Store & Update Tag LRU info
     Server --x Mesh: [ Tag DB Info ] + [ Reader ID ]
     Mesh -x Reader: [ Tag DB Info ]
-    Note left of Reader: Now Display Info on Reader Screen
+    Note left of Reader: Now Display Info on Reader Screen<br/>Store Info Locally In List
 ```
 
 <br/><br/>
 ### First Approximation of RMS Packet Payload
+```basic
+0      64     128    144    152    168    192    225    255
+[ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
+```
+
 ```mermaid
 ---
 title: "Example RMS Packet Payload"
@@ -133,23 +145,28 @@ config:
 ---
  packet-beta
     0-63: "Hashed ID : 64b"
-    64-127: "Payload Size : 64b" 
-    128-143: "Num Blocks : 16b"
+    64-127: "Total Payload Size : 64b" 
+    128-143: "Total Num Blocks : 16b"
     144-151: "Block ID : 8b"
     152-167: "Block Length : 16b"
-    168-191: "Data (Var Len) : Nb"
+    168-191: "Data (Var Len) : (N - 32)b"
+    192-224: "Block Checksum : 32b"
+    225-255: "Zero Fill Padding To Next Pow2 - Discard/Dropped"
 ```
+
 
 <br/><br/>
 ---  
 
 ### RFID Reader States
+&nbsp;&nbsp;&nbsp;&nbsp;_plz reduce complexity here_  
+
 ```mermaid
 stateDiagram-v2
     [*] --> OFF
     OFF --> Booting : Power On
     Booting --> Idle : Boot Complete
-    Idle --> Connecting : Connect to Mesh/Server
+    Idle --> Connecting : Login, Auth, Connect<br/>to Mesh/Server
     Connecting --> Connected : Connection Successful
     Connecting --> Idle : Connection Failed
     Connected --> Scanning : Scan for Tags
