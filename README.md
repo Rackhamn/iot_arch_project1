@@ -63,24 +63,25 @@ graph TD
     Server <--> ServerHTML@{ shape: docs, label: "HTML Server<br/><p style="color: orange;"><b><i>Apache / nginx</i></b></p>" }
     ServerHTML <--> Website
     
-    Master <--> A1(Mesh AP)
-    Master --> A2((Active Tag))
-    Master --> A3((Active Tag))
-    Master --> P1((Passive Tag))
-    Master --> P2((Passive Tag))
-    A1 --> P1
-    A1 --> P2
-    A2 --> P1
-    A2 --> P2
-    A3 --> P1
-    A3 --> P2
-    subgraph APT_1
-        Master(Master<br/>Mesh AP)
+    Master <--> MESH_AP1(Nearest UHF Mesh AP)
+    Master <--> MESH_AP2(UHF Mesh AP)
+    Master <--> MESH_AP3(UHF Mesh AP)
+    MESH_AP1 <--> MESH_AP2
+    MESH_AP1 <--> MESH_AP3
+    MESH_AP3 <--> MESH_AP2
+    A1((Active Tag)) --> MESH_AP1
+    A2((Active Tag)) --> MESH_AP1
+    A3((Active Tag)) --> MESH_AP1
+    A4((Active Tag)) --> MESH_AP1
+    subgraph Apartment Active RFID
+        Master(Master<br/>UHF Mesh AP)
         A1
         A2
         A3
-        P1
-        P2
+        A4
+        MESH_AP1
+        MESH_AP2
+        MESH_AP3
     end
 
   Master2 <--> Mesh2_1
@@ -96,7 +97,7 @@ graph TD
 
   %% Housekeeping@{ shape: hex, label: "Housekeeping<br/><p style="color: orange;"><b><i>Security</i></b></p>"} --> Reader
   Reader(RFID<br/>Interface<br/>Module<br/><p style="color: orange;"><b><i>MFRC522</i></b></p>) --> Mesh2_1
-  subgraph APT_2
+  subgraph Apartment Passive RFID
       Master2(Master<br/>Mesh AP)
       Mesh2_1(Nearest<br/>Mesh AP)
       Mesh2_2(Mesh AP)
@@ -104,7 +105,7 @@ graph TD
       PT1((Passive Tag))
       PT2((Passive Tag))
       PT3((Passive Tag))
-      PT4((Active Tag))
+      PT4((Passive Tag))
     end
 ```
 
