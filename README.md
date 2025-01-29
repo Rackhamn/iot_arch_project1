@@ -127,6 +127,9 @@ sequenceDiagram
 ```
 
 <br/><br/>
+---  
+
+<br/><br/>
 ### First Approximation of RMS Packet Payload
 ```basic
 0      64     128    144    152    168    192    225    255
@@ -146,7 +149,6 @@ struct rms_payload_64b_s {
   struct rms_block_64b_s * blocks;
   uint8_t * zero_padding;
 };
-
 ```
 
 ```mermaid
@@ -172,6 +174,8 @@ config:
     225-255: "Zero Fill Padding To Next Pow2 - Discard/Dropped"
 ```
 
+---  
+
 ```basic
 0      32     64     72     80     96     128    160    192
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
@@ -191,6 +195,7 @@ struct rms_payload_32b_s {
   uint8_t * zero_padding;
 };
 ```
+
 ```mermaid
 ---
 title: "Example 32b RMS Packet Payload"
@@ -214,9 +219,7 @@ config:
     160-191: "Zero Fill Padding To Next Pow2 - Discard/Dropped"
 ```
 
-
 <br/><br/>
----  
 
 ## RFID Reader Communication Layout
 ```mermaid
