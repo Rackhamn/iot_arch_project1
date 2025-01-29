@@ -70,7 +70,7 @@ graph TD
 ### Architecture For Apartments Diagrams:  
 ```mermaid
 graph TD
-    Server(Server)
+    Server@{ shape: processes, label: "<b style="color: orange;"><i>Server</i></b>" }
     Server <--> |TCP/IPV4/6| Master
     Server <--> |TCP/IPV4/6| Master2
 
