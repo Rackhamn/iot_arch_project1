@@ -165,6 +165,7 @@ title: RFID Reader Communications Layout
 ---
 graph LR
     PICO("Pico W") <-- I2C<br/>SDA/SCL pins --> RFID_MODULE("<b style="color: orange;"><i>MFRC522 13.56 MHz</i></b><br/>RFID MODULE")
+    PICO <-- I2C<br/>SDA/SCL pins --> LCD_MODULE("<b style="color: orange;"><i>1602IIC / TC1602B-01</i></b><br/>LCD MODULE")
     RFID_MODULE <--> RFID_PTAG(Passive RFID Tag)
     PICO <-- Builtin<br/>WiFi 802.11n --> MESH_AP(Nearest Mesh AP)
     MESH_AP <-- Mesh Network --> ROUTER(Apartment Router)
