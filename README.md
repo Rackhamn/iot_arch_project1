@@ -164,16 +164,17 @@ config:
 title: RFID Reader Communications Layout
 ---
 graph
-    PICO("Pico W") <-- I2C<br/>SDA/SCL pins --> RFID_MODULE("<b style="color: orange;"><i>Address: 0xXX<br/>MFRC522 13.56 MHz</i></b><br/>RFID MODULE")
+    PICO("<b style="color: orange;"><i>32-bit ARM Cortex-M0+<br/>Basic ARMv6-M instr.</i></b><br/>Pico W") <-- I2C<br/>SDA/SCL pins --> RFID_MODULE("<b style="color: orange;"><i>Address: 0xXX<br/>MFRC522 13.56 MHz</i></b><br/>RFID MODULE")
     PICO <-- I2C<br/>SDA/SCL pins --> LCD_MODULE("<b style="color: orange;"><i>Address: 0x27<br/>1602IIC / TC1602B-01</i></b><br/>LCD MODULE")
     RFID_MODULE <--> RFID_PTAG(Passive RFID Tag)
-    PICO <-- Builtin<br/>WiFi 802.11n --> MESH_AP(Nearest Mesh AP)
+    PICO <--> SHA256_CODEC("<b style="color: orange;"><i>SHA256 / CRC32 Codec</i></b><br/>Packet Security")
+    SHA256_CODEC <-- Builtin<br/>WiFi 802.11n --> MESH_AP(Nearest Mesh AP)
     MESH_AP <-- Mesh Network --> ROUTER(Apartment Router)
     ROUTER <-- TCP/IP --> Server(Server)
     PICO <--> MEMORY_CODEC("<b style="color: orange;"><i>LZ77 / RLE / DEFLATE</i></b><br/>Memory Codec")
     MEMORY_CODEC <-- SPI --> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
     MEMORY_CODEC <-- SPI --> RAM("<b style="color: orange;"><i>External SRAM</i></b><br/>or<br/><b style="color: orange;"><i>192KB Internal SRAM</i></b><br/>")
-    PICO <--> VTABLE("<b style="color: orange;"><i>4KB Mapped Pages<br/>or Ring Buffer</i></b><br/>Virtual Memory")
+    PICO <--> VTABLE("<b style="color: orange;"><i>4KB Mapped Pages<br/>or Ring Buffer<br/>has Direct Memory Access</i></b><br/>Virtual Memory")
     VTABLE <--> MEMORY_CODEC
   %% <p style="color: orange;"><b><i>Redis</i></b></p>
 ```
