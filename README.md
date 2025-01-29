@@ -42,6 +42,7 @@ Plans and details to follow :smiley:
 ## Resources
 [Link Example](http://google.com)  
 [Github .md helper](https://gist.github.com/allysonsilva/85fff14a22bbdf55485be947566cc09e)  
+[ARMv6-M PDF](https://developer.arm.com/documentation/ddi0419/latest/)  
   
 <br/><br/><br/><br/>
   
