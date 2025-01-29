@@ -158,6 +158,21 @@ config:
 <br/><br/>
 ---  
 
+## RFID Reader Communication Layout
+```mermaid
+---
+title: RFID Reader Communications Layout
+---
+graph LR
+    PICO("Pico W") <-- I2C<br/>SDA/SCL pins --> RFID_MODULE("<b style="color: orange;"><i>MFRC522 13.56 MHz</i></b><br/>RFID MODULE")
+    RFID_MODULE <--> RFID_PTAG(Passive RFID Tag)
+    PICO <-- Builtin<br/>WiFi 802.11n --> MESH_AP(Nearest Mesh AP)
+    MESH_AP <-- Mesh Network --> ROUTER(Apartment Router)
+    ROUTER <--> Server(Server)
+    PICO <--> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
+  %% <p style="color: orange;"><b><i>Redis</i></b></p>
+```
+
 ### RFID Reader States
 &nbsp;&nbsp;&nbsp;&nbsp;_plz reduce complexity here_  
 
