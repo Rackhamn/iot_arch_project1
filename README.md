@@ -175,6 +175,21 @@ config:
 ```basic
 0      32     64     72     80     96     128    160    192
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
+
+struct rms_block_32b_s {
+  uint8_t id;
+  uint16_t size;
+  uint8_t * data;
+  uint32_t crc32;
+};
+
+struct rms_payload_32b_s {
+  uint32_t hash_id;
+  uint32_t payload_size_bytes;
+  uint8_t num_blocks;
+  struct rms_block_32b_s * blocks;
+  uint8_t * zero_padding;
+};
 ```
 ```mermaid
 ---
