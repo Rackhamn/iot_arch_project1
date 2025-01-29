@@ -61,7 +61,7 @@ graph TD
 
     Server <--> Logger@{ shape: docs, label: "Log Service<br/><p style="color: orange;"><b><i>+ Watchdog<br/>+ Wireshark</i></b></p>" }
     Server <--> ServerHTML@{ shape: docs, label: "HTML Server<br/><p style="color: orange;"><b><i>Apache / nginx</i></b></p>" }
-    ServerHTML <--> Website
+    ServerHTML <--> Website@{ shape: docs, label: "Website<br/><b style="color: orange;"><i>htmx</i></b></p>" }
     Apartment(Apartment<br/>or Mesh AP) <--> Server
 ```
 <br/><br/>
