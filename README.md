@@ -236,7 +236,7 @@ config:
     packet:
         rowHeight: 32
         bitWidth: 16
-        bitsPerRow: 32
+        bitsPerRow: 64
         showBits: true
         paddingX: 10
         paddingY: 5
