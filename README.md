@@ -46,13 +46,12 @@ Plans and details to follow :smiley:
   
 <br/><br/><br/><br/>
   
-### Architecture Diagrams:  
-
+## Architecture Diagrams:  
+### Architecture For Server Diagrams:  
 ```mermaid
 graph TD
     ServerCache@{ shape: docs, label: "Cache<br/><p style="color: orange;"><b><i>Redis</i></b></p>" } <--> Server
-    Server@{ shape: docs, label: "Server Backend<br/><p style="color: orange;"><b><i>Parallel Job Pool</i></b></p>" } <--> |TCP/IPV4/6| Master
-    Server <--> |TCP/IPV4/6| Master2
+    Server@{ shape: docs, label: "Server Backend<br/><p style="color: orange;"><b><i>Parallel Job Pool</i></b></p>" }
     Server <--> DB@{ shape: cyl, label: "Database<br/><p style="color: orange;"><b><i>SQLite3</i></b></p>" }
     Server --> Anal@{ shape: processes, label: "Analytics<br/><p style="color: orange;"><b><i>Grafana?</i></b></p>" }
     DB <--> BD2@{ shape: cyl, label: "Parity Copy<br/>Database" }
@@ -63,7 +62,18 @@ graph TD
     Server <--> Logger@{ shape: docs, label: "Log Service<br/><p style="color: orange;"><b><i>+ Watchdog<br/>+ Wireshark</i></b></p>" }
     Server <--> ServerHTML@{ shape: docs, label: "HTML Server<br/><p style="color: orange;"><b><i>Apache / nginx</i></b></p>" }
     ServerHTML <--> Website
-    
+    Apartment(Apartment<br/>or Mesh AP) <--> Server
+```
+<br/><br/>
+---  
+
+### Architecture For Apartments Diagrams:  
+```mermaid
+graph TD
+    Server(Server)
+    Server <--> |TCP/IPV4/6| Master
+    Server <--> |TCP/IPV4/6| Master2
+
     Master <--> MESH_AP1(Nearest UHF Mesh AP)
     Master <--> MESH_AP2(UHF Mesh AP)
     Master <--> MESH_AP3(UHF Mesh AP)
@@ -109,6 +119,7 @@ graph TD
       PT4((Passive Tag))
     end
 ```
+
 
 <br/><br/>
 ---  
