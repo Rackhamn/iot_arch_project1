@@ -131,24 +131,26 @@ sequenceDiagram
 
 <br/><br/>
 ### First Approximation of RMS Packet Payload
-```basic
+```c
 0      64     128    144    152    168    192    225    255
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
 
 struct rms_block_64b_s {
-  uint8_t id;
-  uint16_t size;
-  uint8_t * data;
-  uint32_t crc32;
+  uint8_t     id;
+  uint16_t    size;
+  uint8_t *   data;
+  uint32_t    crc32;
 };
+typedef struct rms_block_64b_s block_t;
 
 struct rms_payload_64b_s {
-  uint64_t hash_id;
-  uint64_t payload_size_bytes;
-  uint16_t num_blocks;
-  struct rms_block_64b_s * blocks;
-  uint8_t * zero_padding;
+  uint64_t    hash_id;
+  uint64_t    size; // payload_size_bytes
+  uint16_t    num_blocks;
+  block_t *   blocks;
+  uint8_t *   zero_padding;
 };
+typedef struct rms_payload_64b_s payload_t;
 ```
 
 ```mermaid
@@ -176,24 +178,26 @@ config:
 
 ---  
 
-```basic
+```c
 0      32     64     72     80     96     128    160    192
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
 
 struct rms_block_32b_s {
-  uint8_t id;
-  uint16_t size;
-  uint8_t * data;
-  uint32_t crc32;
+  uint8_t     id;
+  uint16_t    size;
+  uint8_t *   data;
+  uint32_t    crc32;
 };
+typedef struct rms_block_32b_s block_t;
 
 struct rms_payload_32b_s {
-  uint32_t hash_id;
-  uint32_t payload_size_bytes;
-  uint8_t num_blocks;
-  struct rms_block_32b_s * blocks;
-  uint8_t * zero_padding;
+  uint32_t    hash_id;
+  uint32_t    size; // payload_size_bytes
+  uint8_t     num_blocks;
+  block_t *   blocks;
+  uint8_t *   zero_padding;
 };
+typedef struct rms_payload_32b_s payload_t;
 ```
 
 ```mermaid
