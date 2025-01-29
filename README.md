@@ -173,6 +173,8 @@ graph
     PICO <--> MEMORY_CODEC("<b style="color: orange;"><i>LZ77 / RLE / DEFLATE</i></b><br/>Memory Codec")
     MEMORY_CODEC <-- SPI --> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
     MEMORY_CODEC <-- SPI --> RAM("<b style="color: orange;"><i>External SRAM</i></b><br/>or<br/><b style="color: orange;"><i>192KB Internal SRAM</i></b><br/>")
+    PICO <--> VTABLE("<b style="color: orange;"><i>4KB Mapped Pages<br/>or Ring Buffer</i></b><br/>Virtual Memory")
+    VTABLE <--> MEMORY_CODEC
   %% <p style="color: orange;"><b><i>Redis</i></b></p>
 ```
 
