@@ -134,7 +134,7 @@ sequenceDiagram
 
 ```mermaid
 ---
-title: "Example RMS Packet Payload"
+title: "Example 64b RMS Packet Payload"
 config:
     packet:
         rowHeight: 32
@@ -153,6 +153,33 @@ config:
     168-191: "Data (Var Len) : (N - 32)b"
     192-224: "Block Checksum : 32b"
     225-255: "Zero Fill Padding To Next Pow2 - Discard/Dropped"
+```
+
+```basic
+0      32     64     72     80     96     128    160    192
+[ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
+```
+```mermaid
+---
+title: "Example 32b RMS Packet Payload"
+config:
+    packet:
+        rowHeight: 32
+        bitWidth: 16
+        bitsPerRow: 32
+        showBits: true
+        paddingX: 10
+        paddingY: 5
+---
+ packet-beta
+    0-31: "Hashed ID : 32b"
+    32-63: "Total Payload Size : 32b" 
+    64-71: "Total Num Blocks : 8b"
+    72-79: "Block ID : 8b"
+    80-95: "Block Length : 16b"
+    96-127: "Data (Var Len) : (N - 32)b"
+    128-159: "Block Checksum : 32b"
+    160-191: "Zero Fill Padding To Next Pow2 - Discard/Dropped"
 ```
 
 
