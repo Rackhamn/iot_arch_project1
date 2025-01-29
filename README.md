@@ -163,7 +163,7 @@ config:
 ---
 title: RFID Reader Communications Layout
 ---
-graph LR
+graph
     PICO("Pico W") <-- I2C<br/>SDA/SCL pins --> RFID_MODULE("<b style="color: orange;"><i>MFRC522 13.56 MHz</i></b><br/>RFID MODULE")
     PICO <-- I2C<br/>SDA/SCL pins --> LCD_MODULE("<b style="color: orange;"><i>1602IIC / TC1602B-01</i></b><br/>LCD MODULE")
     RFID_MODULE <--> RFID_PTAG(Passive RFID Tag)
@@ -171,6 +171,7 @@ graph LR
     MESH_AP <-- Mesh Network --> ROUTER(Apartment Router)
     ROUTER <--> Server(Server)
     PICO <--> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
+    PICO <--> RAM("<b style="color: orange;"><i>SPI - External SRAM</i></b><br/>or<br/><b style="color: orange;"><i>192KB Internal SRAM</i></b><br/>")
   %% <p style="color: orange;"><b><i>Redis</i></b></p>
 ```
 
