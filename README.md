@@ -135,6 +135,15 @@ sequenceDiagram
 0      64     128    144    152    168    192    225    255
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
 
+/*
+  64b := the max size of an integer is 64 bits (or 8 bytes)
+  this means the following ranges:
+    signed min:    -9,223,372,036,854,775,808         (-2^63)
+    signed max:     9,223,372,036,854,775,807         (2^63 - 1)
+    unsigned min:   0
+    unsigned max:   18,446,744,073,709,551,615        (2^64 - 1)
+*/
+
 struct rms_block_64b_s {
   uint8_t     id;
   uint16_t    size;
@@ -181,6 +190,15 @@ config:
 ```c
 0      32     64     72     80     96     128    160    192
 [ hid  | tps  | tnb  [ blid | size | data | crc  ] zpad ]
+
+/*
+  32b := the max size of an integer is 32 bits (or 4 bytes)
+  this means the following ranges:
+    signed min:    -2,147,483,648                     (-2^31)
+    signed max:     2,147,483,647                     (2^31 - 1)
+    unsigned min:   0
+    unsigned max:   4,294,967,295                     (2^32 - 1)
+*/
 
 struct rms_block_32b_s {
   uint8_t     id;
