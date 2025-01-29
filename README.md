@@ -170,8 +170,9 @@ graph
     PICO <-- Builtin<br/>WiFi 802.11n --> MESH_AP(Nearest Mesh AP)
     MESH_AP <-- Mesh Network --> ROUTER(Apartment Router)
     ROUTER <-- TCP/IP --> Server(Server)
-    PICO <-- SPI --> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
-    PICO <-- SPI --> RAM("<b style="color: orange;"><i>External SRAM</i></b><br/>or<br/><b style="color: orange;"><i>192KB Internal SRAM</i></b><br/>")
+    PICO <--> MEMORY_CODEC("<b style="color: orange;"><i>LZ77 / RLE / DEFLATE</i></b><br/>Memory Codec")
+    MEMORY_CODEC <-- SPI --> EEPROM("<b style="color: orange;"><i>External EEPROM / SSD</i></b><br/>or<br/><b style="color: orange;"><i>1MB Interal Flash Memory</i></b><br/>")
+    MEMORY_CODEC <-- SPI --> RAM("<b style="color: orange;"><i>External SRAM</i></b><br/>or<br/><b style="color: orange;"><i>192KB Internal SRAM</i></b><br/>")
   %% <p style="color: orange;"><b><i>Redis</i></b></p>
 ```
 
