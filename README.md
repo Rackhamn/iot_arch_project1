@@ -49,7 +49,7 @@ Plans and details to follow :smiley:
 ## Architecture Diagrams:  
 ### Architecture For Server Diagrams:  
 ```mermaid
-graph TD
+graph LR
     ServerCache@{ shape: docs, label: "Cache<br/><p style="color: orange;"><b><i>Redis</i></b></p>" } <--> Server
     Server@{ shape: docs, label: "Server Backend<br/><p style="color: orange;"><b><i>Parallel Job Pool</i></b></p>" }
     Server <--> DB@{ shape: cyl, label: "Database<br/><p style="color: orange;"><b><i>SQLite3</i></b></p>" }
