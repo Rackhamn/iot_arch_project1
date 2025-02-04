@@ -7,6 +7,9 @@
 Note(@Rackhamn): 
     This code has not been tested.
     Also! It does not care about the Endianess at all...
+        The Pico W is Little Endian (LE)
+        And all data sent to pico will be in BE (Internet Endianess)
+        Use ntohl() or be32toh() as needed
 */
 
 // rms_block_32b_s 
