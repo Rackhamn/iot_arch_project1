@@ -314,6 +314,39 @@ stateDiagram-v2
 
 <br/><br/>
 
+## Configuration Sequence (Master Node & Phone/Laptop)
+```mermaid
+sequenceDiagram
+    participant Phone/Laptop
+    participant Master_Node as Master Node (Pico W)
+
+    %% Master_Node ->> Master_Node: Init as AP Mode
+    %% Mesh_Node ->> Mesh_Node: Init as STA Mode
+
+    Phone/Laptop ->> Master_Node: Connect to AP (SSID: PicoMeshMaster)
+    Phone/Laptop ->> Master_Node: Open Web UI for Configuration
+    Phone/Laptop ->> Master_Node: Enter Mesh SSID & Password
+    Master_Node ->> Phone/Laptop: Save & Confirm
+    Master_Node ->> Master_Node: Switch to STA Mode
+    Master_Node ->> Mesh_Node: Connect to Mesh Node (SSID: MeshNode)
+```
+
+## Mesh Communication Sequence (Master Node & Mesh Node)
+```mermaid
+sequenceDiagram
+    participant Master_Node as Master Node (Pico W)
+    participant Mesh_Node as Mesh Node (Pico W)
+
+    Master_Node ->> Mesh_Node: Connect to AP (SSID: MeshNode)
+    Master_Node ->> Mesh_Node: Send TCP Packet "Hello from Master"
+    Mesh_Node ->> Master_Node: Receive TCP Packet
+    Mesh_Node ->> Master_Node: Reply "Hello from Mesh Node"
+    Master_Node ->> Mesh_Node: Continue Data Exchange
+```
+
+
+<br/><br/>
+
 ---  
 
 ### Initial Whiteboard Sketch
