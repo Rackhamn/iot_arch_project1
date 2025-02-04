@@ -354,6 +354,44 @@ sequenceDiagram
     Master_Node <<->> Mesh_Node: Continue Data Exchange
 ```
 
+<br/><br/>
+
+
+## Mesh Network Bootstrapping States
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> Init
+    Init --> Scan_Mesh: Scan for Existing Mesh
+    Scan_Mesh --> Join_Mesh: Found Existing Mesh
+    Scan_Mesh --> Become_Master: No Mesh Found (Becomes Master)
+
+    Become_Master --> Start_AP: Start AP Mode (Client Setup)
+    Join_Mesh --> Connect_To_Master: Connect to Master Mesh Node
+    Connect_To_Master --> Mesh_Ready: Start Mesh Communication
+
+    Start_AP --> Wait_Client: Wait for Phone/Laptop Connection
+    Wait_Client --> Web_Config: Host Web UI for Configuration
+    Web_Config --> Setup_Complete: Save Settings
+    Setup_Complete --> Mesh_Ready
+
+    Mesh_Ready --> [*]
+```
+
+## Mesh Network Master State
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Start_AP
+    Start_AP --> Wait_Client: Wait for Phone/Laptop Connection
+    Wait_Client --> Web_Config: Host Web UI (192.168.4.1)
+    Web_Config --> Receive_Config: Receive Network Settings
+    Receive_Config --> Save_Config: Save New Settings
+    Save_Config --> Restart_Network: Restart with New Config
+    Restart_Network --> Mesh_Ready
+    Mesh_Ready --> [*]
+```
 
 <br/><br/>
 
