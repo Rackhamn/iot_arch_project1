@@ -37,7 +37,10 @@ _One with the basic passive RFID tags where we use a reader module._
 _One with the active RFID tags that we try to read once every N seconds. Need to find a working antenna though + think about power consumtion._  
   
 ## Details
-Plans and details to follow :smiley:
+Plans and details to follow :smiley:  
+If you are pushing your own code for personal or testing purposes, put that code in the folder `"RnD/$git-username/..."`  
+Once we are in the real building stage, put your code & tests into `"src/..."` and `"src/unit_test/..."`  
+  > TODO: Add Continuous Integration with github workflows & cmake for the PRs
   
 ## Resources
 [Link Example](http://google.com)  
