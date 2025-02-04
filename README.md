@@ -346,10 +346,10 @@ sequenceDiagram
 
     Master_Node ->> Mesh_Node: Connect to AP (SSID: MeshNode)
     Mesh_Node ->> Master_Node: Acknowledge Connection
-    Master_Node ->> Mesh_Node: Send TCP Packet
+    Master_Node ->> Mesh_Node: Send UDP Packet
     Note right of Mesh_Node: "Hello from Master"
-    %% Note right of Mesh_Node: Receive TCP Packet
-    Mesh_Node ->> Master_Node: Reply TCP Packet
+    %% Note right of Mesh_Node: Receive UDP Packet
+    Mesh_Node ->> Master_Node: Reply UDP Packet
     Note left of Master_Node: "Hello from Mesh Node"
     Master_Node <<->> Mesh_Node: Continue Data Exchange
 ```
