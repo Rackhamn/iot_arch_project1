@@ -435,7 +435,8 @@ MOSI   Master-Out-Slave-In
 MISO   Master-In-Slave-Out
 
 Datasheet links for MFRC522 chip (not the modules themselves):
-https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/60/CN0090%20DATASHEET.pdf
+2007: https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/60/CN0090%20DATASHEET.pdf
+2016: https://cdn.velleman.eu/downloads/29/infosheets/mfrc522_datasheet.pdf
 ```
 
 <br/><br/>
