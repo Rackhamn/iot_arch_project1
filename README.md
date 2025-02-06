@@ -393,6 +393,51 @@ stateDiagram-v2
     Mesh_Ready --> [*]
 ```
 
+## Note on the RFID Reader/Writer Modules
+```
+Model: HW-126, [@Que-ctrl]
+SDA    SCK    MOSI    MISO    IRQ    GND    RST    3.3V
+
+Model: WPI405, TC-9927144, [@Rackhamn, @Gabbemannen00]
+IRQ    NSS*    SCK    MOSI    MISO    GND     RST    VCC**
+    *NSS=SDA
+    **VCC=3.3V
+
+---------------------
+
+On IRQ:
+IRQ is an optional pin. It does not have to be used or plugged in / connected.
+However, if we don't want to poll continuously, we can use IRQ to help trigger events when tag is nearby.
+This does require additional interrupt handling code.
+Using the IRQ-pin can aid in battery life / power consumption.
+
+
+IC Info:
+    IC:     MF RC522
+    RATE:   13.56 MHz
+    COMM:   SPI
+    POWER:  6 dBm (4 mW)
+    DISTANCE: approx. 0 to 5cm
+
+Passive Tags that work with the MFRC522:
+Mifare S50, S70, Ultralight... (most of them i guess)
+
+
+Pin Legend:
+VCC    Voltage Common Collector    (Positive Voltage Supply)
+GND    Ground
+RST    Reset
+SDA    Signal Data
+SCK    Signal Clock
+NSS    Slave Select            (Used as SDA in this case)
+IRQ    Interrupt Request
+MOSI   Master-Out-Slave-In
+MISO   Master-In-Slave-Out
+
+Datasheet links for MFRC522 chip (not the modules themselves):
+https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/60/CN0090%20DATASHEET.pdf
+```
+
 <br/><br/>
 
 ---  
