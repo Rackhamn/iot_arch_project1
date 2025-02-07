@@ -1,3 +1,137 @@
+# About the Server
+
+## Server and Website Structure
+```mermaid
+graph TD
+  %% Server and Website Structure
+  Server -->|Handles Authentication| Website
+  Website -->|User Actions| User
+  User -->|Create Account/Login| Auth[Authentication]
+  Auth -->|2FA?| TwoFactor[Two-Factor Auth]
+```
+
+## User Actions
+```mermaid
+graph TD
+  %% User Actions
+  User -->|View Owned Spaces/Areas| Spaces[Spaces & Areas]
+  User -->|View Member Spaces| Spaces
+  User -->|Create Area| NewArea[Create New Area]
+  User -->|Leave Area| LeaveArea[Leave Existing Area]
+  User -->|Report Bugs| Report[Report Issues]
+  User -->|View Manuals| Manuals[View RFID Manuals & Tutorials]
+```
+
+```mermaid
+graph TD
+  %% User as Owner of an Area
+  Owner[User as Owner] -->|Add Users to Area| AddUser
+  Owner -->|Remove Users| RemoveUser
+  Owner -->|Update Privileges| UpdatePriv[Update User Roles]
+  Owner -->|Manage RFID Tags| RFIDManage[Add/Edit/Remove RFID Tags]
+  Owner -->|View Analytics| Analytics[View Usage Analytics]
+```
+
+```mermaid
+graph TD
+  %% User as Member of an Area
+  Member[User as Member of Area] -->|Search Tags| SearchTag[Search for RFID Tag]
+  Member -->|View Tags| ViewTags[View Tag Data]
+  Member -->|Log Details| LogDetails[Log Tag Discrepancy/Photo]
+  Member -->|View Members| ViewMembers[View Area Members & Contacts]
+```
+
+## Mesh Network
+```mermaid
+graph TD
+  %% Mesh Network
+  MeshAP[Area Mesh Network] -->|Connects to Server| Server
+  MeshAP -->|Requests Info| Server
+  MeshAP -->|Sends Info| Server
+  MeshAP -->|Acts as Router| Router[Router Functions]
+```
+
+```mermaid
+graph TD
+  %% RFID Reader Interface
+  RFIDReader[RFID Reader] -->|Display UID| UID[Shows UID on Startup]
+  RFIDReader -->|Connects to Mesh| MeshAP
+  RFIDReader -->|Modify Settings| Settings[Edit UID/SSID/Password]
+  RFIDReader -->|Read/Store Tag Info| ReadTag[Read/Store Tag Data]
+  RFIDReader -->|List Tags| ListTags[Show Fetched Tags]
+```
+
+```mermaid
+graph TD
+  %% RFID Writer Interface
+  RFIDWriter[RFID Writer] -->|Display UID| UID
+  RFIDWriter -->|Connects to Mesh| MeshAP
+  RFIDWriter -->|Modify Settings| Settings
+  RFIDWriter -->|Write Tag Info| WriteTag[Write to RFID Tag]
+  RFIDWriter -->|List Tags| ListTags
+```
+
+## Server Admin Privileges
+```mermaid
+graph TD
+  %% Server Admin Privileges
+  Admin[Server Admin] -->|List All Tags| ListTags
+  Admin -->|List All Areas| ListAreas
+  Admin -->|List Users| ListUsers[All Users]
+  Admin -->|View Analytics| Analytics
+  Admin -->|View Logs| Logs[View System Logs]
+  Admin -->|Sort by Activity| SortActivity[Sort by Recent Activity]
+  Admin -->|View DB Changes| DBChanges[Database Change Log]
+  Admin -->|View Public/Private Keys| Keys[Key Management]
+  Admin -->|Send Ping to RFID| PingRFID[Send Message to RFID Reader]
+  Admin -->|List IPs| IPList[Known IPs of Mesh APs]
+  Admin -->|List Mesh APs| MeshAP
+  Admin -->|Remote Shutdown| KillSwitch[Shutdown Mesh AP/RFID]
+  Admin -->|Partial Remote Update| RemoteUpdate[Update Mesh AP/RFID]
+```
+
+## Security & Logging
+```mermaid
+graph TD
+  %% Security & Logging
+  MeshAP -->|Sends UID & Interface ID| Server
+  Server -->|Validates Whitelist| Whitelist[Check UID Whitelist]
+  Whitelist -->|If Approved| Approve[Allow Connection]
+  Whitelist -->|If Not Approved| Reject[Reject Not Applicable Action or Error X]
+  Owner & Mod -->|Whitelist Interface UID| MeshPage[Whitelist via Website/Mesh AP]
+
+  MeshAP -->|Logs Actions| Logs
+  Server -->|Logs Web Actions| Logs
+  Server -->|Backups Logs| Backup[Backup on Inactivity]
+```
+
+## More Things
+```mermaid
+graph TD
+  %% Database Structure
+  DB[Database] -->|Stores Tags per Area| TagDB[Tag Data]
+  TagDB -->|Admin View| AdminData[Full Tag Data]
+  TagDB -->|User View| UserData[Partial Tag Data]
+  DB -->|Only User View Shared| UserData
+```
+
+```mermaid
+graph TD
+  %% File Security
+  User -->|Uploads File| SecureContainer[Secure File Storage]
+  SecureContainer -->|Stored Safely| LogsFolder[AreaUID/logs/User/Date/X]
+  SecureContainer -->|Prevents Execution| NoExec[Block Malicious Execution]
+```
+
+```mermaid
+graph TD
+  %% Input Sanitization
+  Website -->|Sanitizes Input| FrontendSanitize[Frontend Filter]
+  FrontendSanitize -->|Server Validates| ServerSanitize[Server Cleansing]
+  ServerSanitize -->|Only Safe Data Accepted| AcceptData[Accept Valid Data]
+```
+
+---
 
 Server-Website:  
     Create Account  
@@ -18,7 +152,7 @@ Server-Website:
     add/edit/remove RFID tag + info DB listing  
     view analytics over time  
   
-- User as Member of Area:  
+- ember of Area:  
     Search for tag  
     View tags (partial information)  
     Can log details about a tag (discrepency, opt photo)  
