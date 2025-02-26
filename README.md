@@ -48,6 +48,17 @@ Once we are in the real building stage, put your code & tests into `"src/..."` a
 [ARMv6-M PDF](https://developer.arm.com/documentation/ddi0419/latest/)  
   
 <br/><br/><br/><br/>
+
+### Quick-Fix Code Graph For Presentation
+```mermaid
+graph TD;
+    %% subgraph Pico W Example
+        A[Pico W Ex] <--> B[Database Server] <--> C[SQLite Database]
+    %%end
+    %% subgraph Web Access
+        D[Browser] <--> E[HTTP Server] <--> C
+    %% end
+```
   
 ## Architecture Diagrams:  
 ### Architecture For Server Diagrams:  
