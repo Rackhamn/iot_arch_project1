@@ -9,7 +9,6 @@ We are 7 members.
 * Gabriel xxx (Gabbemannen00)
 ### Malmö:
 * Martin af Uhr (stormtomten)
-* Kerry xxx (yyy)
 * Denize S. (Que-ctrl)
 
 # Project Information
