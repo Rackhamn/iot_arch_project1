@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>JATS - Dashboard</title>
+</head>
+<body>
+    <!-- <div class="background-text">
+        <h1>JATS</h1>
+        <h2>Jenssen Asset Tracking System</h2>
+    </div> -->
+    <div class="navbar">
+        <h1>Welcome <span id="userName"></span></h1>
+        <div class="menu">
+            <button onclick="showRegisteredTags()">Registered Tags</button>
+            <button onclick="showRegisterTag()">Register Tag</button>
+            <button onclick="showMyAreas()">My Areas</button>
+            <button onclick="toggleHamburgerMenu()">☰</button>
+        </div>
+    </div>
+    <div id="hamburgerMenu" class="hamburger-menu">
+        <!-- <button onclick="showAboutMe()">About Me</button> -->
+        <button onclick="showJATSInfo()">JATS Info</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+    <div id="content"></div>
+    <script src="script.js"></script>
+</body>
+</html>
