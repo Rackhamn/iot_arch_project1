@@ -1,0 +1,197 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #363738, #8c8ee7 , #f7f7f7);
+    /*background-color: black;*/
+    height: 100vh; /*gradient wont work without this*/
+}
+.index-background {
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+    height: 100vh; /* Make sure the body takes the full height of the viewport */
+    background-image: url('images/stad.jpg'); /* Path to your background image */
+    background-size: cover; /* Cover the entire viewport */
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+}
+
+.background-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.801);
+    z-index: 1;
+    
+}
+
+.background-text h1 {
+    font-size: 200px;
+    margin: 0;
+    
+    
+}
+
+.background-text h2 {
+    font-size: 50px;
+    margin: 50px 0 0 0;
+}
+
+.login-container {
+    position: fixed; 
+    top: 50%; 
+    left: 0; 
+    transform: translateY(-50%);
+    text-align: center; 
+    width: 300px; 
+    padding: 20px; 
+    
+    /*box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Optional shadow for better visibility */
+    
+    
+}
+
+.login-container input {
+    background-color: rgba(126, 126, 126, 0.8);
+    color: black;
+    display: block;
+    margin: 10px auto;
+    padding: 10px;
+    width: 200px;
+    border-radius: 10px;
+    
+}
+
+.login-container button {
+    padding: 10px 20px;
+    border-radius: 10px;
+    
+}
+.login-container button:hover {
+    background-color: rgba(231, 216, 216, 0.801); 
+}
+
+.navbar {
+    /*background-color: #000000;*/
+    color: #ffffff;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar h1 { /* Welcome*/
+    margin: 0; /* Remove default margin */
+    font-size: 60px; /* Font size for the welcome message */
+    
+
+}
+
+.menu button { /* registered tags,register tag, my areas*/
+    margin: 0 10px;
+    padding: 10px;
+    /*background-color: #000000;*/
+    background: transparent;
+    /*color: #d31111;*/
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-size: 25px;
+    border-radius: 5px;
+}
+
+.menu button:hover { /*hovra över menyn register tags, registered tags, my areas, hamburger meny*/
+    background-color: rgba(231, 216, 216, 0.801); /* Darker shade on hover */
+}
+
+
+.hamburger-menu { /*menyn som poppar upp när man klickar på hamburger menyn */
+    display: none; /* Initially hidden */
+    position: absolute;
+    top: 80px; /* hur högt hamburger menyn är*/
+    right: 10px;
+    background: transparent;
+    border: none;
+    z-index: 1000;
+    
+}
+
+.hamburger-menu button { /*knapparna i hamburger manyn*/
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    /*color: #d31111;*/
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-size: 25px;
+    border-radius: 5px;
+}
+.hamburger-menu button:hover {
+    background-color: rgba(231, 216, 216, 0.801); 
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    height: 100%; 
+    margin-top: 70px; 
+}
+.button-container button {
+    padding: 10px 20px; 
+    border-radius: 10px; 
+    /*background-color: rgba(126, 126, 126, 0.8); */ 
+    font-size: 20px; 
+    margin: 10px; 
+    background: transparent;
+}
+
+.button-container button:hover {
+    background-color: rgba(231, 216, 216, 0.801); 
+}
+.button-container h2 {
+    font-size: 60px; /* Match the font size of the Welcome Admin text */
+    color: #ffffff; 
+    margin: 0; 
+}
+
+
+/* Styles for the JATS Info page */
+#content {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+#content p {
+    font-size: 25px; /* Match the font size of the Welcome Admin text */
+    color: #ffffff; 
+    margin: 20px auto; 
+}
+
+#backButton {
+    background: transparent;
+    color: white; 
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: block; 
+    margin: 20px auto; 
+    font-size: 20px;
+}
+
+#backButton:hover {
+    background-color: rgba(231, 216, 216, 0.801); 
+}
+.jats-navbar {
+    color: #ffffff;
+    padding: 10px;
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+}
