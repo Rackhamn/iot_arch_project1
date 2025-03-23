@@ -364,3 +364,37 @@ uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid) {
 
         return 0;
 }
+
+uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t * uid) {
+        uint8_t status;
+        uint8_t recv_bits; // do 32b
+        uint8_t i;
+        uint8_t buf[12];
+
+        buf[0] = picc_auth_mode;
+        buf[1] = sector;
+
+        for(i = 0; i < 6; i++) {
+                buf[2 + i] = key[i];
+        }
+
+        for(i = 0; i < 4; i++) {
+                buf[8 + i] = uid[i];
+        }
+
+        // 0x0E = pcd_authent
+        status = card_command(0x0E, buf, 12, buf, &recv_bits);
+
+        // 0x08 = Status2Reg
+        if((status != MI_OK) || (!(read_reg(0x08) & 0x08))) {
+                status = MI_ERR;
+                uint8_t error = read_reg(0x06);
+                printf("auth fail - err: 0x%02X\n", error);
+        }
+
+        // clear_bit_mask(0x08, 0x08);
+
+        return status;
+}
+
+
