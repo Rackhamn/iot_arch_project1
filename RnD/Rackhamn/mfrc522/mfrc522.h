@@ -25,8 +25,8 @@
 #define PICC_REQALL	0x52
 #define PICC_ANTICOLL	0x93
 #define PICC_SELECTTAG	0x93
-#define PICC_AUTH_1A	0x60
-#define PICC_AUTH_1B	0x61
+#define PICC_AUTH1A	0x60
+#define PICC_AUTH1B	0x61
 #define PICC_READ	0x30
 #define PICC_WRITE	0xA0
 #define PICC_DECREMENT	0xC0

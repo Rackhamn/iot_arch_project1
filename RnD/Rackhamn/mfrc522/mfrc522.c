@@ -31,13 +31,13 @@ void clear_bit_mask(uint8_t reg, uint8_t mask) {
 }
 
 void antenna_on(void) {
-        if(~(read_reg(0x14) & 0x03)) {
-                set_bit_mask(0x14, 0x03);
+        if(~(read_reg(TxControlReg) & 0x03)) {
+                set_bit_mask(TxControlReg, 0x03);
         }
 }
 
 void reset(void) {
-        write_reg(0x01, 0x0F);
+        write_reg(CommandReg, PCD_RESETPHASE);
         sleep_ms(50); // ..
 }
 
@@ -76,12 +76,12 @@ void rfid_init(uint32_t spi_baud, spi_inst_t * spix, uint8_t sck_pin, uint8_t mo
 
         // write_reg(_rst, 1);
         reset();
-        write_reg(0x2A, 0x8D);
-        write_reg(0x2B, 0x3E);
-        write_reg(0x2D, 30);
-        write_reg(0x2C, 0);
-        write_reg(0x15, 0x40);
-        write_reg(0x11, 0x3D);
+        write_reg(TModeReg, 0x8D); // 0x2A
+        write_reg(TPrescalerReg, 0x3E); // 0x2B
+        write_reg(TReloadRegL, 30); // 0x2D
+        write_reg(TReloadRegH, 0); // 0x2C
+        write_reg(TxAutoReg, 0x40); // 0x15
+        write_reg(ModeReg, 0x3D); // 0x11
         antenna_on();
 }
 
@@ -91,29 +91,29 @@ uint8_t rfid_transceive(uint8_t *send_data, uint8_t send_len, uint8_t *recv_data
     uint32_t timeout = 10000; // Timeout counter
 
     // Enable interrupts and clear pending IRQs
-    write_reg(0x02, irq_en | 0x80);  // Enable IRQ + global IRQ enable - CommIEnReg
-    write_reg(0x04, 0x7F);           // Clear all IRQ flags - CommIrqReg
+    write_reg(CommIEnReg, irq_en | 0x80);  // Enable IRQ + global IRQ enable - CommIEnReg
+    write_reg(CommIrqReg, 0x7F);           // Clear all IRQ flags - CommIrqReg
 
     // Flush FIFO
-    write_reg(0x0A, 0x80); // Flush FIFO
-    write_reg(0x01, 0x00); // Stop any active command, IDLE
+    write_reg(FIFOLevelReg, 0x80); // Flush FIFO
+    write_reg(CommandReg, PCD_IDLE); // Stop any active command, IDLE
 
     // Write to FIFO
     for (uint8_t i = 0; i < send_len; i++) {
-        write_reg(0x09, send_data[i]); // FIFODataReg
+        write_reg(FIFODataReg, send_data[i]); // FIFODataReg
     }
 
     // Adjust BitFramingReg (7-bit TX mode if needed)
-    write_reg(0x0D, 0x00); // Default: 8-bit per byte
+    write_reg(BitFramingReg, 0x00); // Default: 8-bit per byte
 
     // Start transmission (Transceive command)
-    write_reg(0x01, 0x0C); // CommandReg, TRANSCEIVE
-    set_bit_mask(0x0D, 0x80); // BitFramingReg Start transmission
+    write_reg(CommandReg, PCD_TRANSCEIEVE); // CommandReg, TRANSCEIVE
+    set_bit_mask(BitFramingReg, 0x80); // BitFramingReg Start transmission
 
     // Wait for IRQ
     uint8_t irq_reg = 0;
     while (timeout--) {
-        irq_reg = read_reg(0x04); // CommIrqReg
+        irq_reg = read_reg(CommIrqReg); // CommIrqReg
         if (irq_reg & wait_irq) break;
     }
     if (timeout == 0) {
@@ -122,7 +122,7 @@ uint8_t rfid_transceive(uint8_t *send_data, uint8_t send_len, uint8_t *recv_data
     }
 
     // Check for errors
-    uint8_t error = read_reg(0x06); // ErrorReg
+    uint8_t error = read_reg(ErrorReg); // ErrorReg
     if (error & 0x1B) { // Check collision, parity, or buffer overflow errors
         printf("rfid_transceive: Error detected (0x%02X)\n", error);
         return MI_ERR;
@@ -130,18 +130,18 @@ uint8_t rfid_transceive(uint8_t *send_data, uint8_t send_len, uint8_t *recv_data
 
     // Ensure FIFO has data
     uint8_t attempts = 10;
-    while (!(read_reg(0x0A)) && attempts--) {
+    while (!(read_reg(FIFOLevelReg)) && attempts--) {
         sleep_ms(1);
     }
 
-    uint8_t fifo_level = read_reg(0x0A); // FIFOLevelReg
+    uint8_t fifo_level = read_reg(FIFOLevelReg); // FIFOLevelReg
     if (fifo_level > *recv_len) {
         fifo_level = *recv_len; // Prevent buffer overflow
     }
 
     // Read FIFO
     for (uint8_t i = 0; i < fifo_level; i++) {
-        recv_data[i] = read_reg(0x09); // FIFODataReg
+        recv_data[i] = read_reg(FIFODataReg); // FIFODataReg
     }
 
     *recv_len = fifo_level; // Update received length
@@ -170,24 +170,24 @@ uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uin
 
         *back_len = 0;
 
-        write_reg(0x02, irq_en | 0x80);
-        clear_bit_mask(0x04, 0x80);
-        set_bit_mask(0x0A, 0x80);
-        write_reg(0x01, 0x00);
+        write_reg(CommIEnReg, irq_en | 0x80);
+        clear_bit_mask(CommIrqReg, 0x80);
+        set_bit_mask(FIFOLevelReg, 0x80);
+        write_reg(CommandReg, PCD_IDLE);
 
         for(uint8_t i = 0; i < send_len; i++) {
-                write_reg(0x09, send_data[i]);
+                write_reg(FIFODataReg, send_data[i]);
         }
 
-        write_reg(0x01, command);
-        if(command == 0x0C) {
-                set_bit_mask(0x0D, 0x80);
+        write_reg(CommandReg, command);
+        if(command == PCD_TRANSCEIVE) {
+                set_bit_mask(BitFramingReg, 0x80);
         }
 
 	uint16_t timeout = 2000;
         uint8_t irq_reg = 0;
         do {
-                irq_reg = read_reg(0x04);
+                irq_reg = read_reg(CommIrqReg);
                 timeout--;
         } while(!(irq_reg & 0x30) && timeout > 0);
         if(timeout == 0) {
@@ -195,22 +195,20 @@ uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uin
                 return MI_ERR;
         }
 
-        clear_bit_mask(0x0D, 0x80);
+        clear_bit_mask(BitFramingReg, 0x80);
 
-        if(read_reg(0x06) & 0x1B) {
+        if(read_reg(ErrorReg) & 0x1B) {
                 printf("card_command: error 0x1B\n");
                 return MI_ERR;
         }
 
-        if(command == 0x0C) {
-                // FIFOLevelReg
-                uint8_t n = read_reg(0x0A);
+        if(command == PCD_TRANSCEIEVE) {
+                uint8_t n = read_reg(FIFOLevelReg);
                 if(n >= 16) n = 16;
                 *back_len = n;
 
-                // FIFODataReg
                 for(uint8_t i = 0; i < n; i++) {
-                        back_data[i] = read_reg(0x09);
+                        back_data[i] = read_reg(FIFODataReg);;
                 }
         }
 
@@ -218,35 +216,35 @@ uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uin
 }
 
 void rfid_calculate_crc(uint8_t * data, uint8_t len, uint8_t * crc) {
-        write_reg(0x01, 0x00);
-        write_reg(0x05, 0x04); // clear rcr irq
-        write_reg(0x0A, 0x80);
+        write_reg(CommandReg, 0x00);
+        write_reg(DivIrqReg, 0x04); // clear rcr irq
+        write_reg(FIFOLevelReg, 0x80);
 
         for(uint8_t i = 0; i < len; i++) {
-                write_reg(0x09, data[i]);
+                write_reg(FIFODataReg, data[i]);
         }
 
         // start crc calc
-        write_reg(0x01, 0x03);
+        write_reg(CommandReg, PCD_CALC_CRC);
 
         for(uint16_t i = 5000; i > 0; i--) {
-                if(read_reg(0x05) & 0x04) {
+                if(read_reg(DivIrqReg) & 0x04) {
                         // crc irq bit is set
                         break;
                 }
         }
 
-        crc[0] = read_reg(0x22); // crc result reg low
-        crc[1] = read_reg(0x21); // crc result reg highi
+        crc[0] = read_reg(CRCResultRegH); // crc result reg low
+        crc[1] = read_reg(CRCResultRegL); // crc result reg highi
 }
 
 void rfid_halt(void) {
-        uint8_t buf[4] = { 0x50, 0x00 }; // 0x50 = picc_halt
+        uint8_t buf[4] = { PICC_HALT, 0x00 };
 
         rfid_calculate_crc(buf, 2, &buf[2]);
 
         uint8_t len;
-        uint8_t status = card_command(0x0C, buf, 4, buf, &len);
+        uint8_t status = card_command(PCD_TRANSCEIVE, buf, 4, buf, &len);
         /*
         uint8_t response[1];
         uint8_t response_len = 1;
@@ -266,13 +264,13 @@ uint8_t rfid_anticoll(uint8_t * data, uint8_t * len) {
         // PICC_ANITCOLL, NVB
         // NVB = number of valid bits, with 0x93, 0x20 : 5-bytes (4-uid + 1 bcc checksum)
         // 0x93 : 4-byte uid, 0x95 : 7-byte uid, 0x97 : 10-byte uid
-        uint8_t buf[2] = { 0x93, 0x20 };
+        uint8_t buf[2] = { PICC_ANTICOLL, 0x20 };
         uint8_t buflen = 2;
 
         uint8_t back_data[16] = { 0 };
         uint8_t back_data_len = 0;
 
-        uint8_t status = card_command(0x0C, buf, buflen, back_data, &back_data_len);
+        uint8_t status = card_command(PCD_TRANSCEIVE, buf, buflen, back_data, &back_data_len);
         // printf("cc : %i, len: %i\n", status, back_data_len);
 
 #if defined(TEST)
@@ -297,14 +295,12 @@ uint8_t rfid_anticoll(uint8_t * data, uint8_t * len) {
 }
 
 uint8_t rfid_request(uint8_t mode, uint8_t * tag_type) {
-        // BitFramingReg
-        write_reg(0x0D, 0x07);
+        write_reg(BitFramingReg, 0x07);
         uint8_t status;
         uint8_t back_bits = 0;
 
         tag_type[0] = mode;
-        // PCD_TRANSCEIVE or ControlReg
-        status = card_command(0x0C, tag_type, 1, tag_type, &back_bits);
+        status = card_command(PCD_TRANSCEIVE, tag_type, 1, tag_type, &back_bits);
 
 #if defined(TEST)
         printf("request status: %i, 0x%02X\n", status, back_bits);
@@ -330,8 +326,7 @@ uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid) {
         // = (uid[0] ^ uid[1] ^ uid[2] ^ uid[3])
         // we should send 9 bytes
         // command + crc
-        uint8_t command[9] = { 0x93, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4],
-                0x00, 0x00 };
+        uint8_t command[9] = { PICC_SELECTTAG, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4], 0x00, 0x00 };
         uint8_t sak = 0;
         uint8_t back_data[16] = { 0 };
         uint8_t back_data_len = 16;
@@ -383,12 +378,12 @@ uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t
         }
 
         // 0x0E = pcd_authent
-        status = card_command(0x0E, buf, 12, buf, &recv_bits);
+        status = card_command(PCD_AUTH, buf, 12, buf, &recv_bits);
 
         // 0x08 = Status2Reg
-        if((status != MI_OK) || (!(read_reg(0x08) & 0x08))) {
+        if((status != MI_OK) || (!(read_reg(Status2Reg) & 0x08))) {
                 status = MI_ERR;
-                uint8_t error = read_reg(0x06);
+                uint8_t error = read_reg(ErrorReg);
                 printf("auth fail - err: 0x%02X\n", error);
         }
 
@@ -401,7 +396,7 @@ uint8_t rfid_write_block(uint8_t block, uint8_t * data) {
         uint8_t status;
         uint8_t recv_bits;
         uint8_t i;
-        uint8_t buf[18] = { 0xA0, block }; // select_cmd
+        uint8_t buf[18] = { PICC_WRITE, block }; // select_cmd
 
         if(block % 4 == 3) {
                 printf("Error: Cannot write to sector trailer block %i\n", block);
@@ -448,7 +443,7 @@ uint8_t rfid_read_block(uint8_t block, uint8_t * data) {
         uint8_t status;
         uint8_t recv_bits;
         uint8_t i;
-        uint8_t buf[18] = { 0x30, block }; // select_cmd
+        uint8_t buf[18] = { PICC_READ, block }; // select_cmd
 
         rfid_calculate_crc(buf, 2, &buf[2]);
         status = rfid_transceive(buf, 4, buf, &recv_bits);
@@ -476,9 +471,9 @@ void rfid_dump_classic_1k(uint8_t * keya, uint8_t * keyb, uint8_t * uid) {
 
         printf("rfid_dump_classic_1k = {\n");
         while(sector < 16) {
-                result = rfid_auth(0x60, sector, keya, uid);
+                result = rfid_auth(PICC_AUTH1A, sector, keya, uid);
                 if(result != MI_OK) {
-                        result = rfid_auth(0x61, sector, keya, uid);
+                        result = rfid_auth(PCD_AUTH1B, sector, keya, uid);
                         if(result != MI_OK) {
                                 block += 4;
                                 sector++;
