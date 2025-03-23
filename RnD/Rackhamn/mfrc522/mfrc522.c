@@ -465,3 +465,60 @@ uint8_t rfid_read_block(uint8_t block, uint8_t * data) {
 
         return MI_OK;
 }
+
+void rfid_dump_classic_1k(uint8_t * keya, uint8_t * keyb, uint8_t * uid) {
+        // dump mifare classic 1k
+        uint8_t result;
+        uint8_t sector = 0;
+        uint8_t block = 0;
+        uint8_t buf[16] = { 0 };
+
+        printf("rfid_dump_classic_1k = {\n");
+        while(sector < 16) {
+                result = rfid_auth(0x60, sector, keya, uid);
+                if(result != MI_OK) {
+                        result = rfid_auth(0x61, sector, keya, uid);
+                        if(result != MI_OK) {
+                                block += 4;
+                                sector++;
+                                continue;
+                        }
+                }
+
+                uint8_t nblock = block + 4;
+                while(block < nblock) {
+                        result = rfid_read_block(block, buf);
+                        if(result == MI_OK) {
+                                printf("\t");
+                                for(int i = 0; i < 16; i++) {
+                                        printf("%02X ", buf[i]);
+                                }
+                                printf("\n");
+                        } else {
+                                printf("\t [ auth error ]\n");
+                        }
+                        block++;
+                }
+
+                sector++;
+        }
+        printf("}\n");
+/*
+        printf("DUMP {\n");
+        for(int i = 0; i < 16; i++) {
+                if(rfid_auth(0x60, i, key, uid) == MI_OK) {
+                        if(rfid_read_block(i, buf) == MI_OK) {
+                                printf("\t");
+                                for(int i = 0; i < 16; i++) {
+                                        printf("%02X ", buf[i]);
+                                }
+                                printf("\n");
+                        } else {
+                                printf("\t?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ??\n");
+                        }
+                }
+        }
+        printf("}\n");
+*/
+}
+
