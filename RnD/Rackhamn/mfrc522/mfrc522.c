@@ -149,4 +149,72 @@ uint8_t rfid_transceive(uint8_t *send_data, uint8_t send_len, uint8_t *recv_data
     return MI_OK;
 }
 
+uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uint8_t * back_data, uint8_t * back_len) {
+
+        uint8_t status = MI_ERR;
+        uint8_t irq_en = 0x77;
+        uint8_t wait_irq = 0x30;
+
+        switch(command) {
+                // auth
+                case 0x0E: {
+                        irq_en = 0x12;
+                        wait_irq = 0x10;
+                } break;
+                // transceive
+                case 0x0C: {
+                        irq_en = 0x77;
+                        wait_irq = 0x30;
+                } break;
+        }
+
+        *back_len = 0;
+
+        write_reg(0x02, irq_en | 0x80);
+        clear_bit_mask(0x04, 0x80);
+        set_bit_mask(0x0A, 0x80);
+        write_reg(0x01, 0x00);
+
+        for(uint8_t i = 0; i < send_len; i++) {
+                write_reg(0x09, send_data[i]);
+        }
+
+        write_reg(0x01, command);
+        if(command == 0x0C) {
+                set_bit_mask(0x0D, 0x80);
+        }
+
+	uint16_t timeout = 2000;
+        uint8_t irq_reg = 0;
+        do {
+                irq_reg = read_reg(0x04);
+                timeout--;
+        } while(!(irq_reg & 0x30) && timeout > 0);
+        if(timeout == 0) {
+                // printf("card_command: read timeout!\n");
+                return MI_ERR;
+        }
+
+        clear_bit_mask(0x0D, 0x80);
+
+        if(read_reg(0x06) & 0x1B) {
+                printf("card_command: error 0x1B\n");
+                return MI_ERR;
+        }
+
+        if(command == 0x0C) {
+                // FIFOLevelReg
+                uint8_t n = read_reg(0x0A);
+                if(n >= 16) n = 16;
+                *back_len = n;
+
+                // FIFODataReg
+                for(uint8_t i = 0; i < n; i++) {
+                        back_data[i] = read_reg(0x09);
+                }
+        }
+
+        return MI_OK;
+}
+
 
