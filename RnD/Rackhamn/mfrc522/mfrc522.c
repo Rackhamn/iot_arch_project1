@@ -442,3 +442,26 @@ uint8_t rfid_write_block(uint8_t block, uint8_t * data) {
 
         return MI_OK;
 }
+
+uint8_t rfid_read_block(uint8_t block, uint8_t * data) {
+
+        uint8_t status;
+        uint8_t recv_bits;
+        uint8_t i;
+        uint8_t buf[18] = { 0x30, block }; // select_cmd
+
+        rfid_calculate_crc(buf, 2, &buf[2]);
+        status = rfid_transceive(buf, 4, buf, &recv_bits);
+
+        if(status != MI_OK) {
+                printf("read_block: transceive select FAIL\n");
+                return MI_ERR;
+        }
+
+        for(i = 0; i < 16; i++) {
+                data[i] = buf[i];
+        }
+        // printf("Block %i read from!\n", block);
+
+        return MI_OK;
+}
