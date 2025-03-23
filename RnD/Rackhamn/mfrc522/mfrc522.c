@@ -217,4 +217,27 @@ uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uin
         return MI_OK;
 }
 
+void rfid_calculate_crc(uint8_t * data, uint8_t len, uint8_t * crc) {
+        write_reg(0x01, 0x00);
+        write_reg(0x05, 0x04); // clear rcr irq
+        write_reg(0x0A, 0x80);
+
+        for(uint8_t i = 0; i < len; i++) {
+                write_reg(0x09, data[i]);
+        }
+
+        // start crc calc
+        write_reg(0x01, 0x03);
+
+        for(uint16_t i = 5000; i > 0; i--) {
+                if(read_reg(0x05) & 0x04) {
+                        // crc irq bit is set
+                        break;
+                }
+        }
+
+        crc[0] = read_reg(0x22); // crc result reg low
+        crc[1] = read_reg(0x21); // crc result reg highi
+}
+
 
