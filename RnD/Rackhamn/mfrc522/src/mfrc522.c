@@ -11,6 +11,7 @@ spi_inst_t * _spi;
 uint8_t _sck, _mosi, _miso;
 uint8_t _cs, _rst;
 
+
 void write_reg(uint8_t reg, uint8_t val) {
         uint8_t data[2] = { (reg << 1) & 0x7E, val };
 	gpio_put(_cs, 0);

@@ -85,6 +85,7 @@
 #define REQ_WUPA	0x52
 #define REQ_REQA	0x26
 
+
 /*
 // mfrc522 library state data
 spi_inst_t * _spi;
