@@ -5,6 +5,9 @@
 #define MI_NOTAGERR	1
 #define MI_ERR		2
 
+#define REQ_WUPA	0x52
+#define REQ_REQA	0x26
+
 #define REQIDL		0x26
 #define AUTH_A		0x60
 #define AUTH_B		0x61
