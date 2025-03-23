@@ -325,3 +325,42 @@ uint8_t rfid_request(uint8_t mode, uint8_t * tag_type) {
         return status;
 }
 
+uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid) {
+        // uid[4] == BCC
+        // = (uid[0] ^ uid[1] ^ uid[2] ^ uid[3])
+        // we should send 9 bytes
+        // command + crc
+        uint8_t command[9] = { 0x93, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4],
+                0x00, 0x00 };
+        uint8_t sak = 0;
+        uint8_t back_data[16] = { 0 };
+        uint8_t back_data_len = 16;
+
+        // [ 93 70 D3 2A C6 E7 D8 ] => 0x8D 0x4A        (LSB)
+
+        // compute CRC_A
+        rfid_calculate_crc(command, 7, &command[7]);
+        // printf("CRC_A : 0x%02X 0x%02X\n", command[7], command[8]);
+
+        uint8_t result = rfid_transceive(command, 9, back_data, &back_data_len);
+
+        /*
+        printf("* get_sak\n");
+        printf("write[9]: \n");
+        for(int i = 0; i < 9; i++) {
+                printf("%02X ", command[i]);
+        }
+        printf("\n");
+        printf("status: %i\n", result);
+        printf("read[%i]: ", back_data_len);
+        for(int i = 0; i < back_data_len; i++) {
+                printf("%02X ", back_data[i]);
+        }
+        printf("\n\n");
+	*/
+        if(result == MI_OK && back_data_len > 0) {
+                return back_data[0];
+        }
+
+        return 0;
+}
