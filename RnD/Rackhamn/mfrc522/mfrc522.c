@@ -466,6 +466,7 @@ uint8_t rfid_read_block(uint8_t block, uint8_t * data) {
         return MI_OK;
 }
 
+// dont use this plz
 void rfid_dump_classic_1k(uint8_t * keya, uint8_t * keyb, uint8_t * uid) {
         // dump mifare classic 1k
         uint8_t result;

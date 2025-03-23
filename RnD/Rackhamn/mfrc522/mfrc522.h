@@ -54,6 +54,7 @@ uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t
 uint8_t rfid_write_block(uint8_t block, uint8_t * data);
 uint8_t rfid_read_block(uint8_t block, uint8_t * data);
 
+// dont use this plz
 void rfid_dump_classic_1k(uint8_t * keya, uint8_t * keyb, uint8_t * uid);
 
 #endif /* MFRC522_H */
