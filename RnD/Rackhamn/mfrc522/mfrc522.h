@@ -11,6 +11,60 @@
 
 // TODO: add defines for all hex values in .c
 
+// mf522 specific commands
+#define PCD_IDLE	0x00
+#define PCD_AUTH	0x0E
+#define PCD_RECEIVE	0x08
+#define PCD_TRANSMIT	0x04
+#define PCD_TRANSCEIVE	0x0C
+#define PCD_RESET_PHASE	0x0F
+#define PCD_CALC_CRC	0x03
+
+// mifare specific commands
+#define PICC_REQIDL	0x26
+#define PICC_REQALL	0x52
+#define PICC_ANTICOLL	0x93
+#define PICC_SELECTTAG	0x93
+#define PICC_AUTH_1A	0x60
+#define PICC_AUTH_1B	0x61
+#define PICC_READ	0x30
+#define PICC_WRITE	0xA0
+#define PICC_DECREMENT	0xC0
+#define PICC_INCREMENT	0xC1
+#define PICC_RESTORE	0xC2
+#define PICC_TRANSFER	0xB0
+#define PICC_HALT	0x50
+
+// MFRC522 registers
+#define Reserved	0x00
+#define CommandReg	0x01
+#define CommIEnReg	0x02
+#define DivlEnReg	0x03
+#define ErrorReg	0x06
+#define TxControlReg	0x14
+
+#define ModeReg		0x11
+#define TxModeReg	0x12
+#define RxModeReg	0x13
+#define RxControlReg	0x14
+#define TxAutoReg	0x15
+#define TxSelReg	0x16
+#define RxSelReg	0x17
+#define RxThresholdReg	0x18
+#define DemodReg	0x19
+#define MifareReg	0x1C	// what does this one do?
+#define SerialSpeedReg	0x1F
+
+#define TModeReg	0x2A
+#define TPrescalerReg	0x2B
+#define TReloadRegL	0x2D
+#define TReloadRegH	0x2C
+#define TxAutoReg	0x15
+
+#define CRCResultRegH	0x21
+#define CRCResultRegL	0x22
+#define RFCfgReg	0x26
+
 // mfrc522 library state data
 spi_inst_t * _spi;
 uint8_t _sck, _mosi, _miso;
