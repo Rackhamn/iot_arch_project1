@@ -270,8 +270,8 @@ void rfid_halt(void) {
 
 uint8_t rfid_anticoll(uint8_t * data, uint8_t * len) {
         // printf("attempt anticoll\n");
-        // BitFramingReg
-        write_reg(0x0D, 0x00);
+        // BitFramingReg 0x0D
+        write_reg(BitFramingReg, 0x00);
         // PICC_ANITCOLL, NVB
         // NVB = number of valid bits, with 0x93, 0x20 : 5-bytes (4-uid + 1 bcc checksum)
         // 0x93 : 4-byte uid, 0x95 : 7-byte uid, 0x97 : 10-byte uid
@@ -339,8 +339,8 @@ uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid) {
         // command + crc
         uint8_t command[9] = { 0x93/*PICC_SELECTTAG*/, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4], 0x00, 0x00 };
         uint8_t sak = 0;
-        uint8_t back_data[16] = { 0 };
-        uint8_t back_data_len = 16;
+        uint8_t back_data[MAX_LENGTH] = { 0 };
+        uint8_t back_data_len = MAX_LENGTH;
 
         // [ 93 70 D3 2A C6 E7 D8 ] => 0x8D 0x4A        (LSB)
 

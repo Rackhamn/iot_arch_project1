@@ -21,17 +21,15 @@ int main() {
 
 	printf("RFID is initialized\n");
 
-	// why 16 -- why not
-	#define LENGTH	16
-	uint8_t tagtype[LENGTH] = { 0 };
-	uint8_t uid[LENGTH] = { 0 };
-	uint8_t buf[LENGTH] = { 0 };
+	uint8_t tagtype[MAX_LENGTH] = { 0 };
+	uint8_t uid[MAX_LENGTH] = { 0 };
+	uint8_t buf[MAX_LENGTH] = { 0 };
 	uint8_t uid_len = 0;
 
 	while(1) {
-		memset(tagtype, 0, sizeof(tagtype[0]) * LENGTH);
-		memset(uid, 0, sizeof(uid[0]) * LENGTH);
-		memset(buf, 0, sizeof(buf[0]) * LENGTH);
+		memset(tagtype, 0, sizeof(tagtype[0]) * MAX_LENGTH);
+		memset(uid, 0, sizeof(uid[0]) * MAX_LENGTH);
+		memset(buf, 0, sizeof(buf[0]) * MAX_LENGTH);
 		uid_len = 0;
 
 		// REQ_WUPA == 0x52, wakeup halted cards && new card
@@ -92,15 +90,12 @@ int main() {
 			}
 			printf("\n");
 
+			// make sure that the cards dont hang after auth
 			rfid_clear_after_auth();
-			// clear_bit_mask(0x08, 0x08);
 		} else {
 			printf("Auth Failed!\n");
 		}
 
-		// make sure that the cards dont hang after auth
-		// clear_bit_mask(0x08, 0x08);
-		// rfid_clear_after_auth();
 		printf("\n");
 
 lawait:

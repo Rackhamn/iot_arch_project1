@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_LENGTH	16
+
 #define MI_OK		0
 #define MI_NOTAGERR	1
 #define MI_ERR		2
