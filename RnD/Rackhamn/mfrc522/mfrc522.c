@@ -397,4 +397,48 @@ uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t
         return status;
 }
 
+uint8_t rfid_write_block(uint8_t block, uint8_t * data) {
+        uint8_t status;
+        uint8_t recv_bits;
+        uint8_t i;
+        uint8_t buf[18] = { 0xA0, block }; // select_cmd
 
+        if(block % 4 == 3) {
+                printf("Error: Cannot write to sector trailer block %i\n", block);
+                return MI_ERR;
+        }
+
+        rfid_calculate_crc(buf, 2, &buf[2]);
+        status = rfid_transceive(buf, 4, buf, &recv_bits);
+
+        /*
+        // 0xA0 rec. = 0x0A
+        if((status != MI_OK) || (recv_bits != 4) || ((buf[0] & 0xFF) != 0x0A)) {
+                return MI_ERR;
+        }
+        */
+        if(status != MI_OK) {
+                printf("write_block: transceive select FAIL\n");
+                return MI_ERR;
+        }
+
+        for(i = 0; i < 16; i++) {
+                buf[i] = data[i];
+        }
+        rfid_calculate_crc(buf, 16, &buf[16]);
+        status = rfid_transceive(buf, 18, buf, &recv_bits);
+
+        /*
+        if((status != MI_OK) || (recv_bits != 4) || ((buf[0]) != 0x0A)) {
+                printf("write_block: issue writing data\n");
+                return MI_ERR;
+        }
+        */
+        if(status != MI_OK) {
+                printf("write_block_issue writing data\n");
+                return MI_ERR;
+        }
+        // printf("Block %i written to!\n", block);
+
+        return MI_OK;
+}
