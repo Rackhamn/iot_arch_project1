@@ -5,19 +5,20 @@ This specific implementation was made for the Whadda WPI405 MFRC522 breakout boa
 It has 8 ports. In order from left-to-right they are as following:  
 IRQ, NSS, SCK, MOSI, MISO, GND, RST, VCC  
 
-* NOTE * The IRQ pin is "optional" and I am not sure that it actually works, atleast I haven't made it work correctly yet.  
+* NOTE: The IRQ pin is "optional" and I am not sure that it actually works, atleast I haven't made it work correctly yet.  
 
 In my implementation I have connected the pins to the PI W using the following pins:  
-NSS -> GP17 (SPI0 CSn)  
-SCK -> GP18 (SPI0 SCK)  
-MOSI -> GP19 (SPI0 TX)  
-MISO -> GP16 (SPI0 RX)  
-GND -> GND  
-RST -> GP20 (GPIO)  
-VCC -> pin 36 (3V3 Out)  
-
+| WPI405 Pin | PI W Pin | PI W Legend |
+| :--------- | :------- | :---------- |
+| NSS        | GP17     | SPI0, CSn   |
+| SCK        | GP18     | SPI0, SCK   |
+| MOSI       | GP19     | SPI0, TX    |
+| MISO       | GP16     | SPI0, RX    |
+| GND        | GND      | Ground      |
+| RST        | GP20     | GPIO        |
+| VCC        | Pin 36   | 3V3 Out     |
+  
 The src/test.c file contains a simple example for how to use the code.  
 It does not *yet* contain any write to card implementation.  
   
-
 
