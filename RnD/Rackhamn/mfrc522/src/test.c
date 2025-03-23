@@ -1,7 +1,8 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "mfrc522.c"
+#include "mfrc522.h"
 
 int main() {
 	stdio_init_all();
@@ -39,6 +40,7 @@ int main() {
 		uint8_t status = rfid_request(req_mode, tagtype);
 
 		if(status != MI_OK) {
+			// printf("RFID timeout!\n");
 			goto lawait;
 		}
 
@@ -89,11 +91,17 @@ int main() {
 				printf("%c", (char)buf[i]);
 			}
 			printf("\n");
+
+			rfid_clear_after_auth();
+			// clear_bit_mask(0x08, 0x08);
+		} else {
+			printf("Auth Failed!\n");
 		}
 
 		// make sure that the cards dont hang after auth
 		// clear_bit_mask(0x08, 0x08);
-		rfid_clear_after_auth();
+		// rfid_clear_after_auth();
+		printf("\n");
 
 lawait:
 		sleep_ms(1000);

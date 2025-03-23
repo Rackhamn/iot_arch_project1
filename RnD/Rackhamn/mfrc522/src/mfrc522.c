@@ -1,9 +1,15 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "mfrc522.h"
+
+// mfrc522 library state data
+spi_inst_t * _spi;
+uint8_t _sck, _mosi, _miso;
+uint8_t _cs, _rst;
 
 void write_reg(uint8_t reg, uint8_t val) {
         uint8_t data[2] = { (reg << 1) & 0x7E, val };                                           
@@ -236,8 +242,11 @@ void rfid_calculate_crc(uint8_t * data, uint8_t len, uint8_t * crc) {
                 }
         }
 
-        crc[0] = read_reg(CRCResultRegH); // crc result reg low
-        crc[1] = read_reg(CRCResultRegL); // crc result reg highi
+	// 0x22, 0x21
+        crc[0] = read_reg(CRCResultRegL); // crc result reg low
+        crc[1] = read_reg(CRCResultRegH); // crc result reg highi
+
+	printf("CRC: %02X %02X\n", crc[0], crc[1]);
 }
 
 void rfid_halt(void) {
@@ -328,7 +337,7 @@ uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid) {
         // = (uid[0] ^ uid[1] ^ uid[2] ^ uid[3])
         // we should send 9 bytes
         // command + crc
-        uint8_t command[9] = { PICC_SELECTTAG, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4], 0x00, 0x00 };
+        uint8_t command[9] = { 0x93/*PICC_SELECTTAG*/, 0x70, uid[0], uid[1], uid[2], uid[3], uid[4], 0x00, 0x00 };
         uint8_t sak = 0;
         uint8_t back_data[16] = { 0 };
         uint8_t back_data_len = 16;
@@ -396,7 +405,7 @@ uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t
 
 void rfid_clear_after_auth(void) {
 	// Status2Reg or PCD_RECEIVE
-	clear_bit_mask(0x08, 0x80);
+	clear_bit_mask(0x08, 0x08);
 }
 
 uint8_t rfid_write_block(uint8_t block, uint8_t * data) {

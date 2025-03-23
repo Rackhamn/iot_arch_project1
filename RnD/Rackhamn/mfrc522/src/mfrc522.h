@@ -1,6 +1,12 @@
 #ifndef MFRC522_H
 #define MFRC522_H
 
+#include "pico/stdlib.h"
+#include "hardware/spi.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
 #define MI_OK		0
 #define MI_NOTAGERR	1
 #define MI_ERR		2
@@ -77,10 +83,12 @@
 #define REQ_WUPA	0x52
 #define REQ_REQA	0x26
 
+/*
 // mfrc522 library state data
 spi_inst_t * _spi;
 uint8_t _sck, _mosi, _miso;
 uint8_t _cs, _rst;
+*/
 
 // TODO: convert to rfid_xxx or move wreg/rreg & bitmask to .c
 void write_reg(uint8_t reg, uint8_t val);
