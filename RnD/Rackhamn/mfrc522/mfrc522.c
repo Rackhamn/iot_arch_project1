@@ -240,4 +240,88 @@ void rfid_calculate_crc(uint8_t * data, uint8_t len, uint8_t * crc) {
         crc[1] = read_reg(0x21); // crc result reg highi
 }
 
+void rfid_halt(void) {
+        uint8_t buf[4] = { 0x50, 0x00 }; // 0x50 = picc_halt
+
+        rfid_calculate_crc(buf, 2, &buf[2]);
+
+        uint8_t len;
+        uint8_t status = card_command(0x0C, buf, 4, buf, &len);
+        /*
+        uint8_t response[1];
+        uint8_t response_len = 1;
+        uint8_t result = rfid_transceive(halt_cmd, 4, response, &response_len);
+        if(result == MI_OK && response_len == 0) {
+                return MI_OK;
+        }
+
+        return MI_ERR;
+        */
+}
+
+uint8_t rfid_anticoll(uint8_t * data, uint8_t * len) {
+        // printf("attempt anticoll\n");
+        // BitFramingReg
+        write_reg(0x0D, 0x00);
+        // PICC_ANITCOLL, NVB
+        // NVB = number of valid bits, with 0x93, 0x20 : 5-bytes (4-uid + 1 bcc checksum)
+        // 0x93 : 4-byte uid, 0x95 : 7-byte uid, 0x97 : 10-byte uid
+        uint8_t buf[2] = { 0x93, 0x20 };
+        uint8_t buflen = 2;
+
+        uint8_t back_data[16] = { 0 };
+        uint8_t back_data_len = 0;
+
+        uint8_t status = card_command(0x0C, buf, buflen, back_data, &back_data_len);
+        // printf("cc : %i, len: %i\n", status, back_data_len);
+
+#if defined(TEST)
+        if(back_data_len != 0) {
+                printf("anticoll: ");
+                for(int i = 0; i < back_data_len; i++) {
+                        printf("%02X ", back_data[i]);
+                }
+                printf("\n");
+        }
+#endif
+
+        // we only handle 5 bytes (4-byte uid + checkbyte)
+        if(status == MI_OK && back_data_len == 5) {
+                memcpy(data, back_data, sizeof(back_data[0]) * back_data_len);
+                *len = back_data_len;
+                return MI_OK;
+        }
+
+        // printf("anticoll failed\n");
+        return MI_ERR;
+}
+
+uint8_t rfid_request(uint8_t mode, uint8_t * tag_type) {
+        // BitFramingReg
+        write_reg(0x0D, 0x07);
+        uint8_t status;
+        uint8_t back_bits = 0;
+
+        tag_type[0] = mode;
+        // PCD_TRANSCEIVE or ControlReg
+        status = card_command(0x0C, tag_type, 1, tag_type, &back_bits);
+
+#if defined(TEST)
+        printf("request status: %i, 0x%02X\n", status, back_bits);
+        if(back_bits != 0) {
+                printf("request: ");
+                for(int i = 0; i < 2; i++) {
+                        printf("%02X ", tag_type[i]);
+                }
+                printf("\n");
+        }
+#endif
+
+        // discard error
+        if((status != MI_OK) || (back_bits != 0x10)) {
+                // return MI_ERR;
+        }
+
+        return status;
+}
 
