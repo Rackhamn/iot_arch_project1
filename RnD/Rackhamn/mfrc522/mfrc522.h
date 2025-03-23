@@ -41,6 +41,15 @@
 #define CommIEnReg	0x02
 #define DivlEnReg	0x03
 #define ErrorReg	0x06
+#define Status1Reg	0x07
+#define Status2Reg	0x08
+#define FIFODataReg	0x09
+#define FIFOLevelReg	0x0A
+#define WaterLevelReg	0x0B
+#define ControlReg	0x0C
+#define BitFramingReg	0x0D
+#define CollReg		0x0E
+
 #define TxControlReg	0x14
 
 #define ModeReg		0x11
