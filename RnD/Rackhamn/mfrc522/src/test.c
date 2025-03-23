@@ -76,7 +76,7 @@ int main() {
 
 		// authenticate and read card data
 		uint8_t * key = default_key_a;
-		status = rfid_auth(0x60, 0, key, uid);
+		status = rfid_auth(AUTH_A, 0, key, uid);
 		if(status == MI_OK) {
 			status = rfid_read_block(1, buf);
 			printf("block 0: ");
@@ -92,7 +92,8 @@ int main() {
 		}
 
 		// make sure that the cards dont hang after auth
-		clear_bit_mask(0x08, 0x08);
+		// clear_bit_mask(0x08, 0x08);
+		rfid_clear_after_auth();
 
 lawait:
 		sleep_ms(1000);

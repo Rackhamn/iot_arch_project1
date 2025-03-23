@@ -39,7 +39,7 @@ void antenna_on(void) {
 }
 
 void reset(void) {
-        write_reg(CommandReg, PCD_RESETPHASE);
+        write_reg(CommandReg, PCD_RESET_PHASE);
         sleep_ms(50); // ..
 }
 
@@ -109,7 +109,7 @@ uint8_t rfid_transceive(uint8_t *send_data, uint8_t send_len, uint8_t *recv_data
     write_reg(BitFramingReg, 0x00); // Default: 8-bit per byte
 
     // Start transmission (Transceive command)
-    write_reg(CommandReg, PCD_TRANSCEIEVE); // CommandReg, TRANSCEIVE
+    write_reg(CommandReg, PCD_TRANSCEIVE); // CommandReg, TRANSCEIVE
     set_bit_mask(BitFramingReg, 0x80); // BitFramingReg Start transmission
 
     // Wait for IRQ
@@ -204,7 +204,7 @@ uint8_t card_command(uint8_t command, uint8_t * send_data, uint8_t send_len, uin
                 return MI_ERR;
         }
 
-        if(command == PCD_TRANSCEIEVE) {
+        if(command == PCD_TRANSCEIVE) {
                 uint8_t n = read_reg(FIFOLevelReg);
                 if(n >= 16) n = 16;
                 *back_len = n;
@@ -394,6 +394,11 @@ uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t
         return status;
 }
 
+void rfid_clear_after_auth(void) {
+	// Status2Reg or PCD_RECEIVE
+	clear_bit_mask(0x08, 0x80);
+}
+
 uint8_t rfid_write_block(uint8_t block, uint8_t * data) {
         uint8_t status;
         uint8_t recv_bits;
@@ -473,9 +478,9 @@ void rfid_dump_classic_1k(uint8_t * keya, uint8_t * keyb, uint8_t * uid) {
 
         printf("rfid_dump_classic_1k = {\n");
         while(sector < 16) {
-                result = rfid_auth(PICC_AUTH1A, sector, keya, uid);
+                result = rfid_auth(AUTH_A, sector, keya, uid);
                 if(result != MI_OK) {
-                        result = rfid_auth(PCD_AUTH1B, sector, keya, uid);
+                        result = rfid_auth(AUTH_B, sector, keya, uid);
                         if(result != MI_OK) {
                                 block += 4;
                                 sector++;

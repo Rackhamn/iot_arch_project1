@@ -5,13 +5,6 @@
 #define MI_NOTAGERR	1
 #define MI_ERR		2
 
-#define REQ_WUPA	0x52
-#define REQ_REQA	0x26
-
-#define REQIDL		0x26
-#define AUTH_A		0x60
-#define AUTH_B		0x61
-
 // TODO: add defines for all hex values in .c
 
 // mf522 specific commands
@@ -42,7 +35,9 @@
 #define Reserved	0x00
 #define CommandReg	0x01
 #define CommIEnReg	0x02
-#define DivlEnReg	0x03
+#define DivIEnReg	0x03
+#define CommIrqReg	0x04
+#define DivIrqReg	0x05
 #define ErrorReg	0x06
 #define Status1Reg	0x07
 #define Status2Reg	0x08
@@ -76,6 +71,11 @@
 #define CRCResultRegH	0x21
 #define CRCResultRegL	0x22
 #define RFCfgReg	0x26
+
+#define AUTH_A		PICC_AUTH1A
+#define AUTH_B		PICC_AUTH1B
+#define REQ_WUPA	0x52
+#define REQ_REQA	0x26
 
 // mfrc522 library state data
 spi_inst_t * _spi;
@@ -116,6 +116,7 @@ uint8_t rfid_request(uint8_t mode, uint8_t * tag_type);
 uint8_t rfid_get_sak(uint8_t * atqa, uint8_t * uid);
 
 uint8_t rfid_auth(uint8_t picc_auth_mode, uint8_t sector, uint8_t * key, uint8_t * uid);
+void rfid_clear_after_auth(void);
 
 uint8_t rfid_write_block(uint8_t block, uint8_t * data);
 uint8_t rfid_read_block(uint8_t block, uint8_t * data);
