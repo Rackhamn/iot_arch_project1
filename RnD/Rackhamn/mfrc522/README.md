@@ -20,5 +20,6 @@ In my implementation I have connected the pins to the PI W using the following p
   
 The src/test.c file contains a simple example for how to use the code.  
 It does not *yet* contain any write to card implementation.  
-  
 
+## Pin Connection Example  
+![WPI405 and PI W connection example](img/wpi405_piw_pin_example.jpg)
