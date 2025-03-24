@@ -100,13 +100,13 @@ fetch("/api/v1/tags", {
 | update user data | `PUT/PATCH` | `/api/v1/users` |
 | user (owner) create area | `POST` | `/api/v1/user/areas` |
 | user (owner) delete area | `DELETE` | `/api/v1/user/areas` |
-| user (owner) add user to area | `POST` | `/api/v1/user/area/members` |
-| user (owner) add tag to area | `POST` | `/api/v1/user/area/tags` |
-| user (owner) update tag in area | `PUT/PATCH` | `/api/v1/user/area/tags` |
-| user (owner) remove tag in area | `DELETE` | `/api/v1/user/area/tags` |
-| user (owner/member) get tags in area | `GET` | `/api/v1/area/tags` |
-| user (owner/member) get reports for area | `GET` | `/api/v1/area/reports` |
-| user (owner/member) make report for tag in area | `POST` | `/api/v1/area/report` |
+| user (owner) add user to area | `POST` | `/api/v1/user/area/{area_id}/members` |
+| user (owner) add tag to area | `POST` | `/api/v1/user/area/{area_id}/tags` |
+| user (owner) update tag in area | `PUT/PATCH` | `/api/v1/user/area/{area_id}/tags` |
+| user (owner) remove tag in area | `DELETE` | `/api/v1/user/area/{area_id}/tags` |
+| user (owner/member) get tags in area | `GET` | `/api/v1/area/{area_id}/tags` |
+| user (owner/member) get reports for area | `GET` | `/api/v1/area/{area_id}/reports` |
+| user (owner/member) make report for tag in area | `POST` | `/api/v1/area/{area_id}/report` |
 
 ### Admin Actions
 | Action | HTTP Method | URL |
