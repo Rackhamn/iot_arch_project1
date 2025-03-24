@@ -21,5 +21,17 @@ In my implementation I have connected the pins to the PI W using the following p
 The src/test.c file contains a simple example for how to use the code.  
 It does not *yet* contain any write to card implementation.  
 
-## Pin Connection Example  
+### *test.c*: Expected output on successfull read from Mifare Classic 1K like tags
+```c
+ATQA      : 0400
+UID       : FB 9B FF 72 
+CRC: 60 16
+SAK       : 08
+Check Byte: ED
+CRC: 8B B9
+block 0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+block 0 (str): 
+```
+
+### Pin Connection Example  
 ![WPI405 and PI W connection example](img/wpi405_piw_pin_example.jpg)
