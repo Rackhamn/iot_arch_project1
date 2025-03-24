@@ -89,3 +89,41 @@ fetch("/api/v1/tags", {
   console.error("Error fetching tags:", err);
 });
 ```
+
+### User Actions
+| Action | HTTP Method | URL |
+| :-- | :-- | :-- |
+| login user  | `POST` | `/api/v1/login` |
+| logout user | `POST` | `/api/v1/logout` |
+| create new user | `POST` | `/api/v1/users` |
+| update user data | `PUT/PATCH` | `/api/v1/users` |
+| user (owner) create area | `POST` | `/api/v1/user/areas` |
+| user (owner) delete area | `DELETE` | `/api/v1/user/areas` |
+| user (owner) add user to area | `POST` | `/api/v1/user/area/members` |
+| user (owner) add tag to area | `POST` | `/api/v1/user/area/tags` |
+| user (owner) update tag in area | `PUT/PATCH` | `/api/v1/user/area/tags` |
+| user (owner) remove tag in area | `DELETE` | `/api/v1/user/area/tags` |
+| user (owner/member) get tags in area | `GET` | `/api/v1/area/tags` |
+| user (owner/member) get reports for area | `GET` | `/api/v1/area/reports` |
+| user (owner/member) make report for tag in area | `POST` | `/api/v1/area/report` |
+
+### Admin Actions
+| Action | HTTP Method | URL |
+| :-- | :-- | :-- |
+| get all users | `GET` | `/api/v1/admin/users` |
+| get all tags | `GET` | `/api/v1/admin/tags` |
+| get all areas | `GET` | `/api/v1/admin/areas` |
+
+| Action | HTTP Method | URL Paginated |
+| :-- | :-- | :-- |
+| get all users | `GET` | `/api/v1/admin/users?offset=0&limit=20` |
+| get all tags | `GET` | `/api/v1/admin/tags?offset=0&limit=20` |
+| get all areas | `GET` | `/api/v1/admin/areas?offset=0&limit=20` |
+
+| Action | HTTP Method | URL Paginated & sorted|
+| :-- | :-- | :-- |
+| get all users | `GET` | `/api/v1/admin/users?offset=0&limit=20&sort=name&order=asc` |
+| get all tags | `GET` | `/api/v1/admin/tags?offset=0&limit=20&sort=id&order=asc` |
+| get all areas | `GET` | `/api/v1/admin/areas?offset=0&limit=20&sort=name&order=desc` |
+
+* any more?
