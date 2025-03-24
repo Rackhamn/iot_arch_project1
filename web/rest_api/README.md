@@ -96,6 +96,7 @@ fetch("/api/v1/tags", {
 | login user  | `POST` | `/api/v1/login` |
 | logout user | `POST` | `/api/v1/logout` |
 | create new user | `POST` | `/api/v1/users` |
+| load user data  | `GET` | `/api/v1/users/me` |
 | update user data | `PUT/PATCH` | `/api/v1/users` |
 | user (owner) create area | `POST` | `/api/v1/user/areas` |
 | user (owner) delete area | `DELETE` | `/api/v1/user/areas` |
