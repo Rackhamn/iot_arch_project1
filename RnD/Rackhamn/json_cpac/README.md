@@ -29,6 +29,14 @@ JSON allows for U+2028 (Unicode: Line Separator) and U+2029 (Unicode: Paragraph 
 JSON does not have comments.  
 JSON does not differentiate between numbers as integers or floating-point values (real).  (Thus '42', '42.0', '4.2E+1' can all be the same number, depending on the implementation)  
 Note: JS uses IEEE-754 double-precision floating-point format for all its numeric values.  
+  
+Since JSON uses UTF-8, it can support the full Unicode character set, including characters outside the Basic Multilingual Plane (U+0000 to U+FFFF). If escaped, those characters MUST be written using UTF-16 surrogate pairs.  
+Example: (U+1F610, Unicode: Neutral Face) '😐' has be (in JSON):
+```json
+{ "face": "😐" }
+// or
+{ "face": "\uD83D\uDE10" }
+```
 
 ### Syntax example
 ```json
