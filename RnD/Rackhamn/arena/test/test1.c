@@ -38,6 +38,13 @@ int main() {
 
 		printf("arena offset: %lu, alloc size: %lu\n", 
 			arena.offset, size);
+
+		size_t size2 = sizeof(char) * 128;
+		void * data2 = arena_alloc(&arena, size2);
+
+		printf("arena offset: %lu, alloc size: %lu\n", 
+			arena.offset, size2);
+
 	}
 
 	arena_destroy(&arena);
