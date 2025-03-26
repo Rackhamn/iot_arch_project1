@@ -1,7 +1,7 @@
 # TCP-server backend.
 The TCP-server backend for our readers.
 - Requires SQLite development files.
-- Takes two arguments "<port>" and "<database>"
+- Takes two arguments ```port``` and ```database```
 
 ## Build and compile
 ```sh
