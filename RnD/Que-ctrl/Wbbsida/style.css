@@ -2,7 +2,8 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(to bottom, #363738, #8c8ee7 , #f7f7f7);
+    background: linear-gradient(to bottom, #a8c8e0, #f0f4f8);
+    /*background: linear-gradient(to bottom, #363738, #8c8ee7 , #f7f7f7);*/
     /*background-color: black;*/
     height: 100vh; /*gradient wont work without this*/
 }
@@ -15,6 +16,7 @@ body {
     background-position: center; /* Center the image */
     background-repeat: no-repeat; /* Prevent the image from repeating */
 }
+
 
 .background-text {
     position: absolute;
@@ -134,13 +136,31 @@ body {
     background-color: rgba(231, 216, 216, 0.801); 
 }
 
-.button-container {
+.button-container { /*show all users add user*/
     display: flex;
     flex-direction: column; 
     align-items: center; 
     justify-content: center; 
     height: 100%; 
     margin-top: 70px; 
+    
+    
+    
+}
+#showAllUsersBtn {
+    outline: none; /* Remove the default focus outline */
+    border: none;
+    color: #ffffff;
+    font-size: 30px;
+    
+    
+}
+#createNewUserBtn {
+    outline: none; /* Remove the default focus outline */
+    border: none;
+    color: #ffffff;
+    font-size: 30px;
+    
 }
 .button-container button {
     padding: 10px 20px; 
@@ -149,6 +169,7 @@ body {
     font-size: 20px; 
     margin: 10px; 
     background: transparent;
+    
 }
 
 .button-container button:hover {
@@ -159,6 +180,7 @@ body {
     color: #ffffff; 
     margin: 0; 
 }
+
 
 
 /* Styles for the JATS Info page */
@@ -194,4 +216,28 @@ body {
     display: flex;
     justify-content: center; 
     align-items: center;
+}
+
+.tags-heading {
+    font-size: 60px; /* Match the font size of the Welcome Admin text */
+    color: #ffffff; /* Match the color */
+    margin: 0; /* Remove default margin */
+    text-align: center; /* Center the text */
+    margin-top: 90px;
+}
+
+.tags-heading, .areas-heading, .history-heading {
+    font-size: 60px; /* Match the font size of the Welcome Admin text */
+    color: #ffffff; /* Match the color */
+    margin: 0; /* Remove default margin */
+    text-align: center; /* Center the text */
+    margin-top: 90px;/
+}
+
+.registered-tags-heading, .register-tag-heading, .my-areas-heading {
+    font-size: 60px; /* Match the font size of the Welcome Admin text */
+    color: #ffffff; /* Match the color */
+    margin: 0; /* Remove default margin */
+    text-align: center; /* Center the text */
+    margin-top: 90px;/
 }

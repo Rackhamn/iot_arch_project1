@@ -1,5 +1,5 @@
 // JavaScript for handling user interactions
-
+console.log('Script loaded!');
 // Function to handle login
 document.getElementById('loginForm').addEventListener('submit', function(event) {
     event.preventDefault();
@@ -24,12 +24,14 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     .then(data => {
         // Store the username in localStorage
         localStorage.setItem('username', data.username);
+
         
         // Check if the user is an admin
         if (data.username === 'admin') {
             // Redirect to admin.html for admin users
             window.location.href = 'admin.html';
         } else {
+
             // Redirect to dashboard.html for normal users
             window.location.href = 'dashboard.html';
         }
@@ -38,12 +40,16 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         alert(error.message);
     });
 });
-
+// make this work
 // Function to display the username on the dashboard
-const userName = localStorage.getItem('username');
-if (userName) {
-    document.getElementById('userName').innerText = userName;
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const userName = localStorage.getItem('username');
+    if (userName) {
+        document.getElementById('userName').innerText = userName;
+    } else {
+        console.log('No username found in localStorage'); // Log if no username is found
+    }
+});
 
 // Function to toggle the hamburger menu
 function toggleHamburgerMenu() {
@@ -83,7 +89,8 @@ function fetchUsers() {
         .catch(error => console.error('Error fetching users:', error));
 }
 
-// Function to handle creating a new user
+
+// Function to handle form submisson
 document.getElementById('createUserForm').addEventListener('submit', function(event) {
     event.preventDefault(); // Prevent the default form submission
     const username = document.getElementById('newUsername').value;
@@ -122,12 +129,54 @@ function showRegisteredTags() {
     // Logic to show registered tags
 }
 
+// Function to show users
+function showUsers() {
+    document.getElementById('userManagement').style.display = 'block'; // Show user management section
+    document.getElementById('userManagementList').style.display = 'none'; // Hide user management list
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+
+    
+
+}
+//admin
+function showHistory() {
+    document.getElementById('userManagement').style.display = 'none'; // Hide user management section
+    document.getElementById('userManagementList').style.display = 'none'; // Hide user management list
+
+    // Clear the content area to remove any previously displayed text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+    // Create a new heading for "History"
+    const historyHeading = document.createElement('h2');
+    historyHeading.textContent = 'History'; // Set the text to "History"
+    historyHeading.className = 'history-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(historyHeading);
+}
+
 function showRegisterTag() {
     // Logic to show register tag form
 }
+//admin
+function showAreas() {
+    document.getElementById('userManagement').style.display = 'none'; // Hide user management section
+    document.getElementById('userManagementList').style.display = 'none'; // Hide user management list
 
-function showMyAreas() {
-    // Logic to show user's areas
+    // Clear the content area to remove any previously displayed text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+    // Create a new heading for "Areas"
+    const areasHeading = document.createElement('h2');
+    areasHeading.textContent = 'Areas'; // Set the text to "Areas"
+    areasHeading.className = 'areas-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(areasHeading);
 }
 
 function showAboutMe() {
@@ -137,28 +186,35 @@ function showAboutMe() {
 function showJATSInfo() {
     window.location.href = 'jats-info.html'; // Redirect to the JATS Info page
 }
-
+//admin
 function showTags() {
-    // Logic to show all tags for admin
-}
+    document.getElementById('userManagement').style.display = 'none'; // Hide user management section
+    document.getElementById('userManagementList').style.display = 'none'; // Hide user management list
 
-// Show users function
-function showUsers() {
-    document.getElementById('userManagement').style.display = 'block'; // Show user management section
-    document.getElementById('userManagementList').style.display = 'none'; // Hide user management list initially
-    document.getElementById("createUserSection").style.display = "none"; // Hide form initially
-}
+    // Create a new section for displaying the "Tags" text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
 
+    // Create a new heading for "Tags"
+    const tagsHeading = document.createElement('h2');
+    tagsHeading.textContent = 'Tags'; // Set the text to "Tags"
+    tagsHeading.className = 'tags-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(tagsHeading);
+}
+//admin
+// Show the form for creating a new user
 document.getElementById('createNewUserBtn').addEventListener('click', function () {
     console.log('Create New User button clicked'); // Debug log
-    document.getElementById('createUserSection').style.display = 'block'; // Show the form
-    document.getElementById('userManagementList').style.display = 'none'; // Hide user list
+    document.getElementById('userManagementList').style.display = 'block'; // Show user management list
+    document.getElementById('createUserForm').style.display = 'block'; // Show the form
 });
-
+//admin
 document.getElementById('hamburgerMenu').querySelector('button[onclick="showJATSInfo()"]').addEventListener('click', function() {
     window.location.href = 'jats-info.html'; // Redirect to the JATS Info page
 });
-
+//does not work
 document.getElementById('backButton').addEventListener('click', function() {
     console.log('Back button clicked'); // Debug log
     const username = localStorage.getItem('username');
@@ -168,6 +224,56 @@ document.getElementById('backButton').addEventListener('click', function() {
         window.location.href = 'dashboard.html'; // Redirect to dashboard page
     }
 });
+//users
+function showRegisteredTags() {
+    // Clear the content area to remove any previously displayed text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+    // Create a new heading for "Registered Tags"
+    const registeredTagsHeading = document.createElement('h2');
+    registeredTagsHeading.textContent = 'Registered Tags'; // Set the text to "Registered Tags"
+    registeredTagsHeading.className = 'registered-tags-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(registeredTagsHeading);
+}
+
+function showRegisterTag() {
+    // Clear the content area to remove any previously displayed text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+    // Create a new heading for "Register Tag"
+    const registerTagHeading = document.createElement('h2');
+    registerTagHeading.textContent = 'Register Tag'; // Set the text to "Register Tag"
+    registerTagHeading.className = 'register-tag-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(registerTagHeading);
+}
+
+function showMyAreas() {
+    // Clear the content area to remove any previously displayed text
+    const content = document.getElementById('content');
+    content.innerHTML = ''; // Clear previous content
+
+    // Create a new heading for "My Areas"
+    const myAreasHeading = document.createElement('h2');
+    myAreasHeading.textContent = 'My Areas'; // Set the text to "My Areas"
+    myAreasHeading.className = 'my-areas-heading'; // Add a class for styling
+
+    // Append the heading to the content area
+    content.appendChild(myAreasHeading);
+}
+
+createUserBtn.addEventListener('click', function() {
+    alert("Button clicked!");
+});
+
+
+
+
 
 
 
