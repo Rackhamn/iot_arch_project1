@@ -1,6 +1,7 @@
 #ifndef ARENA_H
 #define ARENA_H
 
+// compile with -lc (libc)
 #include <stdint.h>
 
 typedef struct thread_context_t {
@@ -13,9 +14,10 @@ typedef struct arena_t {
 	size_t size;
 };
 
-int create_arena(arena_t * arena, size_t size);
-void clear_arena(arena_t * arena);
-void desotry_arena(arena_t * arena);
+int arena_create(arena_t * arena, size_t size);
+void arena_clear(arena_t * arena);
+void arena_zero(arena_t * arena);
+void arena_destroy(arena_t * arena);
 void * arena_alloc(arena_t * arena, size_t size);
 
 #endif /* ARENA_H */

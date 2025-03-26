@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "arena.h"
 
 // this is the simplest and kind-of 'worst' arena allocator one can make.
@@ -5,18 +6,23 @@
 // if you want to learn more about arenas, read this link:
 // https://www.rfleury.com/p/untangling-lifetimes-the-arena-allocator
 
-int create_arena(arena_t * arena, size_t size) {
+int arena_create(arena_t * arena, size_t size) {
 	arena->data = malloc(size);
 	if(arena->data == NULL) return ENOMEM;
 	arena->offset = 0;
 	arena->size = size;
 }
 
-void clear_arena(arena_t * arena) {
+void arena_clear(arena_t * arena) {
 	arena->offset = 0;
 }
 
-void destroy_arena(arena_t * arena) {
+void arena_zero(arena_t * arena) {
+	memset(arena->data, 0, arena->size);
+	arena->offset = 0;
+}
+
+void arena_destroy(arena_t * arena) {
 	if(arena == NULL) return;
 	if(arena->data != NULL) free(arena->data);
 	arena->offset = 0;
