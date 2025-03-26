@@ -1,3 +1,5 @@
+[![Build Status](https://cdn.prod.website-files.com/5e0f1144930a8bc8aace526c/65dd9eb5aaca434fac4f1c7c_Build-Passing-brightgreen.svg)]()
+
 # JSON C Parser And Codec
 As the title states, this is to be a C-based parser and codec (outputter/writer) for JSON data.  
 
