@@ -1,4 +1,4 @@
-## MFRC522 Library for RP204 (PI W)
+## MFRC522 Library for RP2040 (Raspberry PI W)
 
 This specific implementation was made for the Whadda WPI405 MFRC522 breakout board.  
   
