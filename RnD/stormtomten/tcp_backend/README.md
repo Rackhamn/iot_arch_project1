@@ -33,6 +33,7 @@ En uppstoppad katt
 - Integration with the production database.
 - **Parsing** if it should be handled here.
 - Look over the memory management.
+- **Security**?
 
 
 
