@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <string.h> // malloc, free
+#include <errno.h> // ENOMEM
 #include "arena.h"
 
 // this is the simplest and kind-of 'worst' arena allocator one can make.
