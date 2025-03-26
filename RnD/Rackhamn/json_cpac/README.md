@@ -1,8 +1,11 @@
+# JSON C Parser And Codec
+As the title states, this is to be a C-based parser and codec (outputter/writer) for JSON data.  
+
 ## Resources about JSON
-https://jsonapi.org/examples/
-https://json.org/example
-https://en.wikipedia.org/wiki/JSON
-https://datatracker.ietf.org/doc/html/rfc4627
+[JSON API](https://jsonapi.org/examples/)  
+[JSON ORG](https://json.org/example)  
+[Wikipedia/JSON](https://en.wikipedia.org/wiki/JSON)  
+[RFC4627](https://datatracker.ietf.org/doc/html/rfc4627)  
 
 ## Information
 JSON uses the filename extension ".json"  
@@ -10,12 +13,14 @@ The media type (MIME) is "application/json"
 It uses UTF-8 character encoding.  
 
 ### JSON Data Types
-Number  
-String  (zero or more Unicode chars, delimited with '"' and supports '\n' escape syntax)   
-Boolean	(either 'true' or 'false)
-Array	(ordererd list of zero or more elements. Uses '[' and ']' bracket notation with ',' separeted elements)  
-Object	(A collection of name-value pairs or String_Key-Value pairs)  
-null	(an empty value - not a pointer)
+| Data Type | Description |
+| :-- | :-- |
+| Number | ... |
+| String | zero or more Unicode chars, delimited with '"' and supports '\n' escape syntax |
+| Boolean | either 'true' or 'false |
+| Array	| ordererd list of zero or more elements. Uses '[' and ']' bracket notation with ',' separeted elements |
+| Object | A collection of name-value pairs or String_Key-Value pairs |
+| null | an empty value - not a pointer |
 
 Whitespace is allowed and ignored around syntactic elements but not withing a string value.
 Four specific characters are whitespace in JSON: Space:' ', Tab:'\t', LF:'\n', CR:'\r'.  
