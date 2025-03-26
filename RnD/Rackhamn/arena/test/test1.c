@@ -16,18 +16,29 @@ int main() {
 
 	printf("arena size: %lu, expect: %lu\n", arena.size, (size_t)PAGE_SIZE);
 
-	const char * cstring = "Hello World!";
-	const size_t cstring_len = strlen(cstring);
-	char * string = arena_alloc(&arena, cstring_len);
+	{
+		const char * cstring = "Hello World!";
+		const size_t cstring_len = strlen(cstring);
+		char * string = arena_alloc(&arena, cstring_len + 1);
 
-	for(int i = 0; i < cstring_len; i++) {
-		string[i] = cstring[i];
+		// make sure to copy the '\0'
+		for(int i = 0; i <= cstring_len; i++) {
+			string[i] = cstring[i];
+		}
+
+		printf("cstring: \"%s\", len: %lu\n", cstring, cstring_len);
+		printf("string : \"%s\", len: %lu\n", string, strlen(string));
 	}
 
-	printf("cstring: \"%s\", len: %lu\n", cstring, cstring_len);
-	printf("string : \"%s\", len: %lu\n", string, strlen(string));
-
 	arena_clear(&arena);
+
+	{
+		size_t size = sizeof(char) * 128;
+		void * data = arena_alloc(&arena, size);
+
+		printf("arena offset: %lu, alloc size: %lu\n", 
+			arena.offset, size);
+	}
 
 	arena_destroy(&arena);
 
