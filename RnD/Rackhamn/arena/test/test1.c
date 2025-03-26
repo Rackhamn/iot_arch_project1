@@ -12,9 +12,9 @@ int main() {
 
 	arena_t arena;
 
-	arena_init(&arena, PAGE_SIZE);
+	arena_create(&arena, PAGE_SIZE);
 
-	printf("arena size: %lu, expect: %lu\n", arena.size, PAGE_SIZE);
+	printf("arena size: %lu, expect: %lu\n", arena.size, (size_t)PAGE_SIZE);
 
 	const char * cstring = "Hello World!";
 	const size_t cstring_len = strlen(cstring);
