@@ -26,6 +26,7 @@ int setup_server(int port) {
     exit(1);
   }
 
+  memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(port);
@@ -104,17 +105,20 @@ int handle_client(int client_socket, sqlite3 *db) {
   char buffer[BUFFER_SIZE] = {0};
   int bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
 
+  if (bytes_received == 0) {
+    printf("Client disconnected: %d\n", client_socket);
+    return 1; // Signal client disconnect
+  } else if (bytes_received < 0) {
+    perror("recv() error");
+    return 1;
+  }
+
   // Ensure string termination (handling newline from telnet).
   if (bytes_received > 2) {
     buffer[bytes_received - 2] = '\0';
   }
 
-  if (bytes_received <= 0) {
-    printf("Client disconnected: %d\n", client_socket);
-    return 1; // Signal client disconnect
-  }
-
-  printf("Recieved query: %s\n", buffer);
+  printf("Recieved query: %s from client: %d\n", buffer, client_socket);
   char *result = process_client_query(db, buffer);
 
   if (send(client_socket, result, strlen(result), 0) < 0) {
@@ -172,6 +176,16 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("Shutting down\n");
+  // Shutting all connections
+  for (int fd = 0; fd <= max_fd; fd++) {
+    if (FD_ISSET(fd, &read_fds)) { // Checking if fd is active
+      if (fd != server_socket) {   // Close if not server
+        printf("Closing client connection: %d\n", fd);
+        close(fd);
+        FD_CLR(fd, &read_fds);
+      }
+    }
+  }
 
   close(server_socket);
   printf("Server socket closed\n");
