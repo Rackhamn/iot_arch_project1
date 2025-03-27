@@ -27,6 +27,12 @@ typedef struct string8_s string8_t;
  *
  *	+ auto remove emoji stuff?
  *	+ use arena plz
+ *
+ *	utf8_has_bom(ptr):
+ *		find utf8 BOM (Byte Order Mark)
+ *		BOM = 0xEF 0xBB 0xBF
+ *		its optional and often dismissed.
+ *
 */
 
 // maybe: 
