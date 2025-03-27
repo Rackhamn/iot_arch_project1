@@ -10,6 +10,8 @@
 // 	LE: 0x34, 0x12
 // 	BE: 0x12, 0x34
 
+// JSON_TOKEN_ARRAY
+// JSON_TOKEN_OBJECT
 #define JSON_TOKEN_STRING	0
 #define JSON_TOKEN_NUMBER	1
 #define JSON_TOKEN_TRUE		2
@@ -25,6 +27,10 @@
 #define JSON_TOKEN_ERR		12
 typedef uint8_t token_type_t;
 
+// predefine structs as types, otherwise C complains and we cant to mishmash
+typedef struct json_element_s json_element_t;
+typedef struct json_value_s json_value_t;
+
 struct json_token_s {
 	token_type_t type;
 	uint8_t * start; // if we use arena, maybe use [ base_ptr, offset ]
@@ -32,6 +38,22 @@ struct json_token_s {
 };
 typedef struct json_token_s json_token_t;
 
+struct json_value_s {
+	token_type_t type;
+	union {
+		double number;
+		char * cstr;
+		utf8c * str8;
+		uint8_t boolean;
+		// struct json_array { json_value ** items; size_t count }
+		// struct json_object { json_element ** elements; size_t count }
+	};
+};
+
+struct json_element_s {
+	uint8_t * key; // maybe str8 key or string_int
+	json_value_t * value;
+};
 
 struct json_cpac_s {
 	// arena_t * arena;
