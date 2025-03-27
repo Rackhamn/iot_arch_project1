@@ -11,6 +11,7 @@
 // 	BE: 0x12, 0x34
 //
 //	needs a json_serialize function to write data into json utf8 buffer
+// 	we might as well do a pretty print function
 
 // JSON_TOKEN_ARRAY
 // JSON_TOKEN_OBJECT
