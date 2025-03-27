@@ -38,4 +38,45 @@ struct json_cpac_s {
 };
 typedef struct json_cpac_s json_cpac_t;
 
+// not implemented
+json_token_t json_next_token(uint8_t * ptr) {
+	json_token_t tok;
+
+	tok.type = 0;
+	tok.start = ptr;
+	tok.len = 0;
+
+	return tok;
+}
+
+void json_cpac_test() {
+	/* Expected Output:
+	 *  5, '{'
+	 *  0, 'name'
+	 *  9, ':'
+	 *  0, 'admin'
+	 * 10, ','
+	 *  0, 'age'
+	 *  9, ':'
+	 *  1, '30'
+	 * 10, ','
+	 *  0, 'tag'
+	 *  9, ':'
+	 *  0, '😐'
+	 *  6, '}'
+	 *
+	 * num tokens: 13
+	*/
+	uint8_t * data = "{\"name\":\"admin\",\"age\":30,\"tag\":\"😐\"}";
+
+	uint8_t * ptr = (uint8_t*)data;
+	json_token_t tok;
+	do {
+		tok = json_next_token(ptr);
+		printf("Token: %d, Value: '%.*s'\n", 
+			tok.type, (int)tok.len, tok.start);
+	} while(tok.type != JSON_TOKEN_EOF && tok.type != JSON_TOKEN_ERR);
+}
+
+
 #endif /* JSON_CPAC_H */
