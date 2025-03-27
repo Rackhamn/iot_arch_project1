@@ -171,6 +171,7 @@ int main(int argc, char *argv[]) {
       if (fd != server_socket && FD_ISSET(fd, &temp_fds)) {
         handle_client(fd, db);
         close(fd);
+        printf("Closing client connection: %d\n", fd);
         FD_CLR(fd, &read_fds);
       }
     }
