@@ -10,6 +10,7 @@ As the title states, this is to be a C-based parser and codec (outputter/writer)
 [RFC4627](https://datatracker.ietf.org/doc/html/rfc4627)  
 [Library: cJSON](https://github.com/DaveGamble/cJSON)  
 [Library: jsmn (jasmine)](https://github.com/zserge/jsmn)  
+[Library: sheredom/utf8.h](https://github.com/sheredom/utf8.h)  
 
 ## Information
 JSON uses the filename extension ".json"  
