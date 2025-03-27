@@ -9,6 +9,8 @@
 // 	and handle endianess on it for uint16_t conversion!
 // 	LE: 0x34, 0x12
 // 	BE: 0x12, 0x34
+//
+//	needs a json_serialize function to write data into json utf8 buffer
 
 // JSON_TOKEN_ARRAY
 // JSON_TOKEN_OBJECT
