@@ -76,6 +76,9 @@ void test_decode_utf8(void) {
 	uint8_t data_size = strlen(data);
 	uint8_t num_codepoints = 0;
 
+	printf("input: \"%s\"\n", data);
+
+	printf("output:\n");
 	while(*data) {
 		uint32_t codepoint = decode_utf8(&data);
 		printf("U+%04X\n", codepoint);
