@@ -46,7 +46,7 @@ struct json_value_s {
 	union {
 		double number;
 		char * cstr;
-		utf8c * str8;
+		// utf8c * str8;
 		uint8_t boolean;
 		// struct json_array { json_value ** items; size_t count }
 		// struct json_object { json_element ** elements; size_t count }
