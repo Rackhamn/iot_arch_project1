@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(${PROJECT_NAME}
     src/main.c
 )
+add_executable(${PROJECT_NAME}_test
+    tests/test.c
+)
 target_link_libraries(${PROJECT_NAME}
     sqlite3
 )
