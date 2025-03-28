@@ -11,6 +11,7 @@ As the title states, this is to be a C-based parser and codec (outputter/writer)
 [Library: cJSON](https://github.com/DaveGamble/cJSON)  
 [Library: jsmn (jasmine)](https://github.com/zserge/jsmn)  
 [Library: sheredom/utf8.h](https://github.com/sheredom/utf8.h)  
+[IBM: JSON Parser Limits](https://www.ibm.com/docs/en/datapower-gateway/10.6.0?topic=20-json-parser-limits)  
 
 ## Information
 JSON uses the filename extension ".json"  
