@@ -46,6 +46,8 @@ En karta över norra Kaledonien
 
 ```127.0.0.1 8080 50 2```
 
+**Side-not** The test is not particularly robust but does a decent first benchmark.
+
 
 ## **TODO**
 - Integration with the production database.
