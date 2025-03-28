@@ -85,10 +85,12 @@ void *client_thread(void *arg) {
            i + 1);
            */
       counter++;
+    } else {
+      printf("Thread %d: Request %d failed\n", data->thread_id, i + 1);
     }
 
     // Small delay between requests (in microseconds)
-    usleep(10000); // 1ms delay
+    usleep(800);
   }
 
   // Cleanup
@@ -161,7 +163,7 @@ int main(int argc, char *argv[]) {
       free(data);
     }
     // Small delay between thread creation
-    usleep(1000);
+    usleep(800);
   }
 
   // Wait for all threads to complete
