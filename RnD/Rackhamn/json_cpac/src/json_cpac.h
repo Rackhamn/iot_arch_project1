@@ -74,6 +74,82 @@ json_token_t json_next_token(uint8_t * ptr) {
 	return tok;
 }
 
+json_token_t * json_parse() {
+	return NULL;
+}
+
+struct json_result_s {
+	// ...
+};
+
+json_result_t json_parse_string(arena_t * arena, char * str);
+void json_dump_results(json_result_t, char * str);
+
+
+
+// lit: literal == null, true, false
+json_value_t * json_parse_lit(arena_t * arena, char ** s, char * text, json_type_t type, int bvalue) {
+	size_t len = strlen(text);
+	if(strncmp(*s, text, len) != 0) {
+		return NULL;
+	}
+
+	json_value_t * val = arena_alloc(arena, sizeof(json_value_t));
+	if(val == NULL) {
+		return NULL;
+	}
+	if(type == JSON_TOKEN_BOOL) {
+		val->boolean = bvalue;
+	}
+	*s += len;
+	return val;
+}
+
+json_value_t * json_parse_value(arena_t * arena, char ** s) {
+	json_skip_whitespace(s);
+	if(**s == '"') {
+		return json_parse_string(arena, s);
+	}
+	if(**s == '{') {
+		return json_parse_object(arena, s);
+	}
+	if(**s == '[') {
+		return json_parse_array(arena, s);
+	}
+	if(**s == 'n') {
+		return json_parse_lit(arena, s, "null", JSON_TOKEN_NULL, 0);
+	}
+	if(**s == 't') {
+		return json_parse_lit(arena, s, "true", JSON_TOKEN_BOOL, 1);
+	}
+	if(**s == 'f') {
+		return json_parse_lit(arena, s, "false", JSON_TOKEN_BOOL, 0);
+	}
+	if((**s >= '0' && **s <= '9') || **s == '-') {
+		return parse_number(arena, s);
+	}
+	return NULL;
+}
+
+json_result_t json_parse(arena_t * arena, char * str) {
+	char * s = src;
+	json_value_t * root = json_parse_value(arena, &s);
+	if(root == NULL) {
+		return (json_result_t) { .root = NULL, .err = "parse error" };
+	}
+
+	json_skip_whitespace(&s);
+	if(*s != '\0') {
+		return (json_result_t) { .root = NULL, .err = "trailing data" };
+	}
+
+	return (json_result_t) { .root = root, .err = NULL };
+}
+
+
+
+
+
 void json_cpac_test() {
 	/* Expected Output:
 	 *  5, '{'
@@ -94,11 +170,15 @@ void json_cpac_test() {
 	*/
 	uint8_t * data = "{\"name\":\"admin\",\"age\":30,\"tag\":\"😐\"}";
 
+	printf("input: \"%s\"\n", (char*)data);
 	uint8_t * ptr = (uint8_t*)data;
 	json_token_t tok;
+
+	printf("output:\n");
 	do {
 		tok = json_next_token(ptr);
-		printf("Token: %d, Value: '%.*s'\n", 
+		// printf("Token: %d, Value: '%.*s'\n", 
+		printf("%d: \'.*s\'\n", 
 			tok.type, (int)tok.len, tok.start);
 	} while(tok.type != JSON_TOKEN_EOF && tok.type != JSON_TOKEN_ERR);
 }
