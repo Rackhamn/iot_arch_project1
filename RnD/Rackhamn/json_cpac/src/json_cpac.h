@@ -88,6 +88,26 @@ json_result_t json_parse_string(arena_t * arena, char * str);
 void json_dump_results(json_result_t, char * str);
 json_value_t * json_parse_value(arena_t * arena, char * str);
 
+json_value_t * json_parse_number(arena_t * arena, char **s) {
+	char * end;
+	double num = strtod(*s, &end);
+	if(end == *s) {
+		return NULL;
+	}
+
+	json_value_t * val = arena_alloc(arena, sizeof(json_value_t));
+	if(val == NULL) {
+		return NULL;
+	}
+
+	val->type = JSON_TOKEN_NUMBER;
+	val->number = num;
+
+	*s = end;
+
+	return val;
+}
+
 json_value_t * json_parse_string(arena_t * arena, char **s) {
 	if(*s != '"') {
 		return NULL;
