@@ -88,6 +88,43 @@ json_result_t json_parse_string(arena_t * arena, char * str);
 void json_dump_results(json_result_t, char * str);
 json_value_t * json_parse_value(arena_t * arena, char * str);
 
+json_value_t * json_parse_string(arena_t * arena, char **s) {
+	if(*s != '"') {
+		return NULL;
+	}
+	(*s)++;
+
+	char * start = *s;
+	while(**s && **s != '"') {
+		(*s)++;
+	}
+	if(**s != '"') {
+		return NULL;
+	}
+
+	size_t len = *s - start;
+	char * cpy = arena_alloc(arena, len + 1);
+	if(cpy == NULL) {
+		return NULL;
+	}
+
+	memcpy(cpy, start, len);
+	cpy[len] = '\0';
+
+	json_value_t * val = arena_alloc(arena, sizeof(json_value_t));
+	if(val == NULL) {
+		return NULL;
+	}
+
+	val->type = JSON_TOKEN_STRING;
+	val->string.chars = cpy;
+	val->string.length = len;
+
+	(*s)++;
+
+	return val;
+}
+
 json_value_t * json_parse_array(arena_t * arena, char **s) {
 	if(**s != '[') {
 		return NULL;
