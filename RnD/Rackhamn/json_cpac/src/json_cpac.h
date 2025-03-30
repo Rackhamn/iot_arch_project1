@@ -13,30 +13,30 @@
 //	needs a json_serialize function to write data into json utf8 buffer
 // 	we might as well do a pretty print function
 
-// JSON_TOKEN_ARRAY
-// JSON_TOKEN_OBJECT
-#define JSON_TOKEN_STRING	0
-#define JSON_TOKEN_NUMBER	1
-// JSON_TOKEN_BOOL
-#define JSON_TOKEN_TRUE		2
-#define JSON_TOKEN_FALSE	3
-#define JSON_TOKEN_NULL		4
-#define JSON_TOKEN_LBRACE	5  // {
-#define JSON_TOKEN_RBRACE	6  // }
-#define JSON_TOKEN_LBRACKET	7  // [
-#define JSON_TOKEN_RBRACKET	8  // ]
-#define JSON_TOKEN_COLON	9  // :
-#define JSON_TOKEN_COMMA	10 // ,
-#define JSON_TOKEN_EOF		11
-#define JSON_TOKEN_ERR		12
-typedef uint8_t token_type_t;
+#define JSON_TOKEN_ARRAY	0
+#define JSON_TOKEN_OBJECT	1
+#define JSON_TOKEN_STRING	2
+#define JSON_TOKEN_NUMBER	3
+#define JSON_TOKEN_BOOL		4
+#define JSON_TOKEN_TRUE		5
+#define JSON_TOKEN_FALSE	6
+#define JSON_TOKEN_NULL		7
+#define JSON_TOKEN_LBRACE	8  // {
+#define JSON_TOKEN_RBRACE	9  // }
+#define JSON_TOKEN_LBRACKET	10 // [
+#define JSON_TOKEN_RBRACKET	11 // ]
+#define JSON_TOKEN_COLON	12 // :
+#define JSON_TOKEN_COMMA	13 // ,
+#define JSON_TOKEN_EOF		14
+#define JSON_TOKEN_ERR		15
+typedef uint8_t json_type_t; // old: token_type_t
 
 // predefine structs as types, otherwise C complains and we cant to mishmash
-typedef struct json_element_s json_element_t;
+// typedef struct json_element_s json_element_t;
 typedef struct json_value_s json_value_t;
 
 struct json_token_s {
-	token_type_t type;
+	json_type_t type;
 	uint8_t * start; // if we use arena, maybe use [ base_ptr, offset ]
 	size_t len;
 };
@@ -49,7 +49,7 @@ struct json_member_s {
 typedef struct json_member_s json_member_t;
 
 struct json_value_s {
-	token_type_t type;
+	json_type_t type;
 	union {
 		double number;
 		// char * cstr;
@@ -84,9 +84,10 @@ void json_skip_whitespace(char **s) {
 	}
 }
 
-json_result_t json_parse_string(arena_t * arena, char * str);
-void json_dump_results(json_result_t, char * str);
-json_value_t * json_parse_value(arena_t * arena, char * str);
+json_value_t * json_parse_lit(arena_t * arena, char ** s, char * text, json_type_t type, int bvalue); 
+json_value_t * json_parse_string(arena_t * arena, char ** str);
+json_value_t * json_parse_value(arena_t * arena, char ** str);
+void json_dump_results(json_result_t node, char ** str);
 
 json_value_t * json_parse_number(arena_t * arena, char **s) {
 	char * end;
@@ -109,7 +110,7 @@ json_value_t * json_parse_number(arena_t * arena, char **s) {
 }
 
 json_value_t * json_parse_string(arena_t * arena, char **s) {
-	if(*s != '"') {
+	if(**s != '"') {
 		return NULL;
 	}
 	(*s)++;
@@ -276,10 +277,14 @@ json_value_t * json_parse_lit(arena_t * arena, char ** s, char * text, json_type
 	if(val == NULL) {
 		return NULL;
 	}
-	if(type == JSON_TOKEN_BOOL) {
+
+	val->type = type;
+	if(type == JSON_TOKEN_BOOL || type == JSON_TOKEN_TRUE || type == JSON_TOKEN_FALSE) {
 		val->boolean = bvalue;
 	}
-	*s += len;
+
+	(*s) += len;
+
 	return val;
 }
 
@@ -298,19 +303,20 @@ json_value_t * json_parse_value(arena_t * arena, char ** s) {
 		return json_parse_lit(arena, s, "null", JSON_TOKEN_NULL, 0);
 	}
 	if(**s == 't') {
-		return json_parse_lit(arena, s, "true", JSON_TOKEN_BOOL, 1);
+		return json_parse_lit(arena, s, "true", JSON_TOKEN_TRUE, 1);
 	}
 	if(**s == 'f') {
-		return json_parse_lit(arena, s, "false", JSON_TOKEN_BOOL, 0);
+		return json_parse_lit(arena, s, "false", JSON_TOKEN_FALSE, 0);
 	}
 	if((**s >= '0' && **s <= '9') || **s == '-') {
-		return parse_number(arena, s);
+		return json_parse_number(arena, s);
 	}
 	return NULL;
 }
 
 json_result_t json_parse(arena_t * arena, char * str) {
-	char * s = src;
+	char * s = str;
+
 	json_value_t * root = json_parse_value(arena, &s);
 	if(root == NULL) {
 		return (json_result_t) { .root = NULL, .err = "parse error" };
@@ -350,8 +356,8 @@ void json_cpac_test() {
 
 	printf("input: \"%s\"\n", (char*)data);
 	uint8_t * ptr = (uint8_t*)data;
+	/*
 	json_token_t tok;
-
 	printf("output:\n");
 	do {
 		tok = json_next_token(ptr);
@@ -359,7 +365,15 @@ void json_cpac_test() {
 		printf("%d: \'.*s\'\n", 
 			tok.type, (int)tok.len, tok.start);
 	} while(tok.type != JSON_TOKEN_EOF && tok.type != JSON_TOKEN_ERR);
-}
+	*/
 
+	arena_t arena;
+	arena_create(&arena, 4096 * 4);
+	json_result_t result = json_parse(&arena, ptr);
+
+	printf("result: %p, %p\n", result.root, result.err);
+
+	arena_destroy(&arena);
+}
 
 #endif /* JSON_CPAC_H */

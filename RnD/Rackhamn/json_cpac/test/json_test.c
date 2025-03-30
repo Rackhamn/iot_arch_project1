@@ -5,11 +5,13 @@
 #include "../../arena/arena.h"
 #include "../src/string8.h"
 #include "../src/json_cpac.h"
+#include "../src/json_dump.h"
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE	4096
 #endif
 
+// JSON "maximum" file size is 4MB~ in the IBM Parser btw
 uint8_t file_buffer[PAGE_SIZE] = { 0 };
 size_t file_buffer_size = 0;
 
@@ -17,6 +19,8 @@ size_t file_buffer_size = 0;
 
 int main() {
 	
+	// Load JSON File
+	printf("Load JSON File\n");
 	FILE * fp = fopen(FILE_PATH, "rb");
 	if(fp == NULL) {
 		printf("Error: File '%s' Could Not Be Opened.\n", FILE_PATH);
@@ -44,6 +48,22 @@ int main() {
 	fclose(fp);
 
 	printf("File Data:\n%s\n", file_buffer);
+	printf("\n");
+
+	// Parse JSON File
+	arena_t arena;
+	
+	arena_create(&arena, PAGE_SIZE * 16); // guesstimate size
+	
+	char * ptr = &file_buffer;
+	json_result_t result;
+	result = json_parse(&arena, ptr);
+
+	// json_dump_results(result, file_buffer);
+	printf("Result:\n");
+	json_dump(result);
+
+	arena_destroy(&arena);
 
 	return 0;
 }
