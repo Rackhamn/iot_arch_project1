@@ -86,8 +86,127 @@ void json_skip_whitespace(char **s) {
 
 json_result_t json_parse_string(arena_t * arena, char * str);
 void json_dump_results(json_result_t, char * str);
+json_value_t * json_parse_value(arena_t * arena, char * str);
 
+json_value_t * json_parse_array(arena_t * arena, char **s) {
+	if(**s != '[') {
+		return NULL;
+	}
+	(*s)++;
+	json_skip_whitespace(s);
 
+	json_value_t **items = NULL;
+	size_t count = 0;
+
+	if(**s == ']') {
+		(*s)++;
+	} else {
+		while(1) {
+			json_skip_whitespace(s);
+			json_value_t * item = json_parse_value(arena, s);
+			if(item == NULL) {
+				return NULL;
+			}
+
+			void * new_items = arena_alloc(arena, sizeof(json_value_t *) * (count + 1));
+			if(new_items == NULL) {
+				return NULL;
+			}
+			memcpy(new_items, items, sizeof(json_value_t *) * count);
+			items = new_items;
+			items[count++] = item;
+
+			json_skip_whitespace(s);
+			if(**s == ']') {
+				(*s)++;
+				break;
+			} else if(**s == ',') {
+				(*s)++;
+			} else {
+				return NULL;
+			}
+		}
+	}
+
+	json_value_t * val = arena_alloc(arena, sizeof(json_value_t));
+	if(val == NULL) {
+		return NULL;
+	}
+
+	val->type = JSON_TOKEN_ARRAY;
+	val->array.items = items;
+	val->array.count = count;
+
+	return val;
+}
+
+json_value_t * json_parse_object(arena_t * arena, char ** s) {
+	if(**s != '{') return NULL;
+	(*s)++;
+	json_skip_whitespace(s);
+
+	json_member_t * members = NULL;
+	size_t count = 0;
+
+	if(**s == '}') {
+		(*s)++;
+	} else {
+		while(1) {
+			json_skip_whitespace(s);
+			json_value_t * key = json_parse_string(arena, s);
+
+			if(key == NULL) {
+				return NULL;
+			}
+			
+			json_skip_whitespace(s);
+			if(**s != ':') {
+				return NULL;
+			}
+
+			(*s)++;
+			json_skip_whitespace(s);
+
+			json_value_t * val = json_parse_value(arena, s);
+			if(val == NULL) {
+				return NULL;
+			}
+
+			void * new_members = arena_alloc(arena, sizeof(json_member_t) * (count + 1));
+			if(new_members == NULL) {
+				return NULL;
+			}
+			// idk bout this
+			memcpy(new_members, members, sizeof(json_member_t) * count);
+			members = new_members;
+
+			members[count].key = key->string.chars;
+			members[count].value = val;
+			count++;
+
+			json_skip_whitespace(s);
+			if(**s == '}') {
+				(*s)++;
+				break;
+			} else if(**s == ',') {
+				(*s)++;
+			} else {
+				return NULL;
+			}
+		}
+	}
+
+	json_value_t * obj = arena_alloc(arena, sizeof(json_value_t));
+	if(obj == NULL) {
+		return NULL;
+	}
+
+	obj->type = JSON_TOKEN_OBJECT;
+	obj->object.members = members;
+	obj->object.count = count;
+
+	return obj;
+}
 
 // lit: literal == null, true, false
 json_value_t * json_parse_lit(arena_t * arena, char ** s, char * text, json_type_t type, int bvalue) {
