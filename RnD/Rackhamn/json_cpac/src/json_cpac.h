@@ -17,6 +17,7 @@
 // JSON_TOKEN_OBJECT
 #define JSON_TOKEN_STRING	0
 #define JSON_TOKEN_NUMBER	1
+// JSON_TOKEN_BOOL
 #define JSON_TOKEN_TRUE		2
 #define JSON_TOKEN_FALSE	3
 #define JSON_TOKEN_NULL		4
@@ -41,46 +42,47 @@ struct json_token_s {
 };
 typedef struct json_token_s json_token_t;
 
+struct json_member_s {
+	char * key;
+	json_value_t * value;
+};
+typedef struct json_member_s json_member_t;
+
 struct json_value_s {
 	token_type_t type;
 	union {
 		double number;
-		char * cstr;
+		// char * cstr;
 		// utf8c * str8;
 		uint8_t boolean;
 		// struct json_array { json_value ** items; size_t count }
 		// struct json_object { json_element ** elements; size_t count }
+		struct {
+			char * chars;
+			size_t length;
+		} string;
+		struct {
+			json_value_t ** items;
+			size_t count;
+		} array;
+		struct {
+			json_member_t * members;
+			size_t count;
+		} object;
 	};
 };
 
-struct json_element_s {
-	uint8_t * key; // maybe str8 key or string_int
-	json_value_t * value;
-};
-
-struct json_cpac_s {
-	// arena_t * arena;
-};
-typedef struct json_cpac_s json_cpac_t;
-
-// not implemented
-json_token_t json_next_token(uint8_t * ptr) {
-	json_token_t tok;
-
-	tok.type = 0;
-	tok.start = ptr;
-	tok.len = 0;
-
-	return tok;
-}
-
-json_token_t * json_parse() {
-	return NULL;
-}
-
 struct json_result_s {
-	// ...
+	json_value_t * root;
+	char * err;
 };
+typedef struct json_result_s json_result_t;
+
+void json_skip_whitespace(char **s) {
+	while(**s == ' ' || **s == '\n' || **s == '\t' || **s == '\r') {
+		(*s)++;
+	}
+}
 
 json_result_t json_parse_string(arena_t * arena, char * str);
 void json_dump_results(json_result_t, char * str);
