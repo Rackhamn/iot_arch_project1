@@ -3,6 +3,21 @@
 
 #include "json_cpac.h"
 
+#define DEBUG
+
+// void printfcol(char * fmt, ...) {
+#define FCC_RED		31
+#define FCC_GREEN	32
+
+#if !defined(DEBUG) 
+#define printfcol(fcc, ...)
+#else
+#define printfcol(fcc, ...) \
+	printf("\e[1;%dm", fcc); \
+	printf(__VA_ARGS__); \
+	printf("\e[0m");
+#endif
+
 // predefs
 void json_dump(json_result_t result);
 void json_dump_value(json_value_t * val, int indent);
@@ -16,12 +31,14 @@ void json_print_indent(int level) {
 	while(level--) {
 		// printf(" ");
 		putchar(' ');
+		putchar(' ');
 	}
 }
 
 void json_dump_string(char * str) {
 	char * s = str;
 
+	printfcol(FCC_GREEN, "{STRING}");
 	putchar('"');
 	while(*s) {
 		if(*s == '"' || *s == '\\') {
@@ -38,6 +55,7 @@ void json_dump_string(char * str) {
 }
 
 void json_dump_array(json_value_t * val, int indent) {
+	printfcol(FCC_GREEN, "{ARRAY}");
 	printf("[\n");
 
 	for(size_t i = 0; i < val->array.count; i++) {
@@ -56,6 +74,7 @@ void json_dump_array(json_value_t * val, int indent) {
 }
 
 void json_dump_object(json_value_t * val, int indent) {
+	printfcol(FCC_GREEN, "{OBJECT}");
 	printf("{\n");
 
 	for(size_t i = 0; i < val->object.count; i++) {
@@ -78,19 +97,24 @@ void json_dump_object(json_value_t * val, int indent) {
 
 void json_dump_value(json_value_t * val, int indent) {
 	switch(val->type) {
-		case JSON_TOKEN_NULL: 
+		case JSON_TOKEN_NULL:
+			printfcol(FCC_GREEN, "{LIT}");
 			printf("null"); 
 			break;
-		case JSON_TOKEN_BOOL: 
+		case JSON_TOKEN_BOOL:
+		       	printfcol(FCC_GREEN, "{LIT}");	
 			printf(val->boolean ? "true" : "false"); 
 			break;
 		case JSON_TOKEN_TRUE:
+			printfcol(FCC_GREEN, "{LIT}");
 			printf("true");
 			break;
 		case JSON_TOKEN_FALSE:
+			printfcol(FCC_GREEN, "{LIT}");
 			printf("false");
 			break;
 		case JSON_TOKEN_NUMBER:
+			printfcol(FCC_GREEN, "{NUMBER}");
 			printf("%g", val->number);
 			break;
 		case JSON_TOKEN_STRING:
@@ -103,7 +127,7 @@ void json_dump_value(json_value_t * val, int indent) {
 			json_dump_object(val, indent);
 			break;
 		default:
-			printf("<err>");
+			printfcol(FCC_RED, "<err>");
 			break;
 
 	}
