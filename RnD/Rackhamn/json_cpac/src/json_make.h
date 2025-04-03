@@ -84,6 +84,41 @@ json_value_t * json_make_array(arena_t * arena) {
 	return value;
 }
 
+json_value_t * json_make_object(arena_t * arena) {
+	json_value_t * value = arena_alloc(arena, sizeof(json_value_t));
+	
+	if(value == NULL) {
+		return NULL;
+	}
+
+	value->type = JSON_TOKEN_OBJECT;
+	value->object.members = NULL;
+	value->object.count = 0;
+
+	return value;
+}
+
+int json_array_append(arena_t * arena, json_value_t * array, json_value_t * item) {
+	size_t count = array->array.count;
+	// dont like to copy the entire array each damn time we add an item (even if its ptrs)
+	json_valut_t ** new_items = arena-alloc(arena, sizeof(json_value_t *) * (count + 1));
+
+	if(new_items == NULL) {
+		return 0;
+	}
+
+	if(count > 0) {
+		memcpy(new_items, array->array.items, sizeof(json_value_t *) * (count + 1));
+	}
+
+	new_items[count] = item;
+
+	array->array.items = new_items;
+	array->array.count = count + 1;
+
+	return 1;
+	
+}
 
 
 int test_json_write() {
