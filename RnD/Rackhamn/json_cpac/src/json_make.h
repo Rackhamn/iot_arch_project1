@@ -35,7 +35,18 @@ json_value_t * json_make_bool(arena_t * arena, int bvalue) {
 	return value;
 }
 
+json_value_t * json_make_number(arena_t * arena, double number) {
+	json_value_t * value = arena_alloc(arena, sizeof(json_value_t));
 
+	if(value == NULL) {
+		return NULL;
+	}
+
+	value->type = JSON_TOKEN_NUMBER;
+	value->number = number;
+
+	return value;
+}
 
 
 int test_json_write() {
