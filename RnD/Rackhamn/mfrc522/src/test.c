@@ -25,7 +25,8 @@ int main() {
 	uint8_t uid[MAX_LENGTH] = { 0 };
 	uint8_t buf[MAX_LENGTH] = { 0 };
 	uint8_t uid_len = 0;
-
+	uint8_t block_index = 1;
+	
 	while(1) {
 		memset(tagtype, 0, sizeof(tagtype[0]) * MAX_LENGTH);
 		memset(uid, 0, sizeof(uid[0]) * MAX_LENGTH);
@@ -78,13 +79,13 @@ int main() {
 		uint8_t * key = default_key_a;
 		status = rfid_auth(AUTH_A, 0, key, uid);
 		if(status == MI_OK) {
-			status = rfid_read_block(1, buf);
-			printf("block 0: ");
+			status = rfid_read_block(block_index, buf);
+			printf("block %i: ", block_index);
 			for(int i = 0; i < 16; i++) {
 				printf("%02X ", buf[i]);
 			}
 			printf("\n");
-			printf("block 0 (str): ");
+			printf("block %i (str): ", block_index);
 			for(int i = 0; i < 16; i++) {
 				printf("%c", (char)buf[i]);
 			}

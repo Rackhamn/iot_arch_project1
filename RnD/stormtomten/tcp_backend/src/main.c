@@ -13,6 +13,7 @@
 
 volatile int run = 1;
 
+// TODO OVERFLOW!
 void catch_ctrl_c(int sig) { run = 0; }
 
 // Server setup
@@ -123,76 +124,82 @@ int handle_client(int client_socket, sqlite3 *db) {
 
   if (send(client_socket, result, strlen(result), 0) < 0) {
     perror("Send failed");
-    free(result);
+    if (result) {
+      free(result);
+    }
     return 2; // Signal Send failure
   }
 
-  free(result); // Free memory from process_client_query
+  if (result) {
+    free(result); // Free memory from process_client_query
+                  //
 
-  return 0;
-}
-
-int main(int argc, char *argv[]) {
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <port> <database_path>\n", argv[0]);
-    return 1;
+    return 0;
   }
 
-  signal(SIGINT, catch_ctrl_c);
-  int port = atoi(argv[1]);
-  const char *db_path = argv[2];
-
-  int server_socket = setup_server(port);
-  sqlite3 *db;
-
-  // Open database in readonly
-  if (sqlite3_open_v2(db_path, &db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-    fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(db));
-    return 1;
-  }
-
-  fd_set read_fds;
-  FD_ZERO(&read_fds);
-  FD_SET(server_socket, &read_fds);
-  int max_fd = server_socket;
-
-  while (run) {
-    fd_set temp_fds = read_fds;
-    if (select(max_fd + 1, &temp_fds, NULL, NULL, NULL) < 0) {
-      perror("select() error");
-      break;
+  int main(int argc, char *argv[]) {
+    if (argc != 3) {
+      fprintf(stderr, "Usage: %s <port> <database_path>\n", argv[0]);
+      return 1;
     }
 
-    if (FD_ISSET(server_socket, &temp_fds)) {
-      accept_new_client(server_socket, &read_fds, &max_fd);
+    signal(SIGINT, catch_ctrl_c);
+    int port = atoi(argv[1]);
+    const char *db_path = argv[2];
+
+    int server_socket = setup_server(port);
+    sqlite3 *db;
+
+    // Open database in readonly
+    if (sqlite3_open_v2(db_path, &db, SQLITE_OPEN_READONLY, NULL) !=
+        SQLITE_OK) {
+      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(db));
+      return 1;
     }
 
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(server_socket, &read_fds);
+    int max_fd = server_socket;
+
+    while (run) {
+      fd_set temp_fds = read_fds;
+      if (select(max_fd + 1, &temp_fds, NULL, NULL, NULL) < 0) {
+        perror("select() error");
+        break;
+      }
+
+      if (FD_ISSET(server_socket, &temp_fds)) {
+        accept_new_client(server_socket, &read_fds, &max_fd);
+      }
+
+      for (int fd = 0; fd <= max_fd; fd++) {
+        if (fd != server_socket && FD_ISSET(fd, &temp_fds)) {
+          handle_client(fd, db);
+          close(fd);
+          printf("Closing client connection: %d\n", fd);
+          FD_CLR(fd, &read_fds);
+        }
+      }
+    }
+    printf("Shutting down\n");
+    // Shutting all connections
     for (int fd = 0; fd <= max_fd; fd++) {
-      if (fd != server_socket && FD_ISSET(fd, &temp_fds)) {
-        handle_client(fd, db);
-        close(fd);
-        printf("Closing client connection: %d\n", fd);
-        FD_CLR(fd, &read_fds);
+      if (FD_ISSET(fd, &read_fds)) { // Checking if fd is active
+        if (fd != server_socket) {   // Close if not server
+          printf("Closing client connection: %d\n", fd);
+          close(fd);
+          FD_CLR(fd, &read_fds);
+        }
       }
     }
+
+    close(server_socket);
+    printf("Server socket closed\n");
+
+    sqlite3_close(db);
+    printf("Database closed\n");
+
+    return 0;
   }
-  printf("Shutting down\n");
-  // Shutting all connections
-  for (int fd = 0; fd <= max_fd; fd++) {
-    if (FD_ISSET(fd, &read_fds)) { // Checking if fd is active
-      if (fd != server_socket) {   // Close if not server
-        printf("Closing client connection: %d\n", fd);
-        close(fd);
-        FD_CLR(fd, &read_fds);
-      }
-    }
-  }
-
-  close(server_socket);
-  printf("Server socket closed\n");
-
-  sqlite3_close(db);
-  printf("Database closed\n");
-
-  return 0;
 }

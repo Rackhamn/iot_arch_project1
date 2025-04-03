@@ -29,8 +29,8 @@ CRC: 60 16
 SAK       : 08
 Check Byte: ED
 CRC: 8B B9
-block 0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-block 0 (str): 
+block 1: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+block 1 (str): 
 ```
 
 ### Pin Connection Example  
