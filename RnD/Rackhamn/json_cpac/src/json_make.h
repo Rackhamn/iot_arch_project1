@@ -48,6 +48,30 @@ json_value_t * json_make_number(arena_t * arena, double number) {
 	return value;
 }
 
+json_value_t * json_make_string(arena_t * arena, char * str) {
+	size_t len = strlen(str);
+	char * cpy = arena_alloc(arena, len + 1);
+
+	if(cpy == NULL) {
+		return NULL; // maybe return a "" instead
+	}
+
+	memcpy(cpy, str, len + 1);
+
+	json_value_t * value = arena_alloc(arena, sizeof(json_value_t));
+
+	if(value == NULL) {
+		return NULL;
+	}
+
+	value->type = JSON_TOKEN_STRING;
+	value->string.chars = cpy;
+	value->stirng.length = len;
+
+	reutrn value;
+}
+
+
 
 int test_json_write() {
 	arena_t arena;
