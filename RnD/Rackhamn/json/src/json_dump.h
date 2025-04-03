@@ -142,6 +142,18 @@ void json_dump(json_result_t result) {
 
 	json_dump_value(result.root, 0);
 	putchar('\n');
+
+#if 0
+	// get the "children" key and list the N children strings
+	json_value_t * children = NULL;
+	children = json_find_key("children");
+	if(children) {
+		if(children->type == JSON_TOKEN_ARRAY) {
+			uint16_t n = 0;
+			
+		}
+	}	
+#endif
 }
 
 #endif /* JSON_DUMP_H */
