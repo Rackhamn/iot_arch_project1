@@ -101,7 +101,7 @@ json_value_t * json_make_object(arena_t * arena) {
 int json_array_append(arena_t * arena, json_value_t * array, json_value_t * item) {
 	size_t count = array->array.count;
 	// dont like to copy the entire array each damn time we add an item (even if its ptrs)
-	json_valut_t ** new_items = arena-alloc(arena, sizeof(json_value_t *) * (count + 1));
+	json_value_t ** new_items = arena-alloc(arena, sizeof(json_value_t *) * (count + 1));
 
 	if(new_items == NULL) {
 		return 0;
@@ -120,6 +120,35 @@ int json_array_append(arena_t * arena, json_value_t * array, json_value_t * item
 	
 }
 
+int json_object_add(arena_t * arena, json_value_t * object, char * key, json_value_t * value) {
+	size_t count = object->object.count;
+	json_member_t * new_members = arena_alloc(arena, sizeof(json_member_t) * (count + 1));
+
+	if(new_members == NULL) {
+		return 0;
+	}
+
+	if(count > 0) {
+		memcpy(new_members, object->object.members, sizeof(json_member_t) * (count + 1));
+	}
+
+	size_t key_len = strlen(key);
+	char * key_cpy = arena_alloc(arena, key_len + 1);
+
+	if(key_cpy == NULL) {
+		return 0;
+	}
+
+	memcpy(key_cpy, key, key_len + 1);
+
+	new_members[count].key = key_copy;
+	new_members[count].value = value;
+
+	object->object.members = new_members;
+	object->object.count = count + 1;
+
+	return 1;
+}
 
 int test_json_write() {
 	arena_t arena;
