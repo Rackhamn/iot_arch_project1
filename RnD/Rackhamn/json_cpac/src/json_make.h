@@ -71,6 +71,19 @@ json_value_t * json_make_string(arena_t * arena, char * str) {
 	reutrn value;
 }
 
+json_value_t * json_make_array(arena_t * arena) {
+	json_value * value = arena_alloc(arena, sizeof(json_value_t));
+
+	if(value == NULL) {
+		return NULL;
+	}
+
+	value->array.items = NULL;
+	value->array.count = 0;
+
+	return value;
+}
+
 
 
 int test_json_write() {
