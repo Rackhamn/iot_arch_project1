@@ -1,7 +1,7 @@
 #ifndef JSON_DUMP_H
 #define JSON_DUPM_H
 
-#include <varargs.h>
+#include <stdarg.h>
 #include "json_cpac.h"
 
 #define DEBUG
@@ -41,16 +41,16 @@ void json_sb_put(json_sb_t * sb, char c) {
 	}
 }
 
-void json_sb_puts(json_sb_t * sb, char * str) {
+void json_sb_puts(json_sb_t * sb, char * s) {
 	while(*s) {
-		json_sb_out(sb, *str);
-		str++;
+		json_sb_put(sb, *s);
+		s++;
 	}
 }
 
 void json_sb_indent(json_sb_t * sb, int level) {
 	while(level--) {
-		json_sb_puts("  ");
+		json_sb_puts(sb, "  ");
 	}
 }
 
@@ -168,11 +168,11 @@ void json_write_value(json_sb_t * sb, json_value_t * val, int indent) {
 }
 
 
-void json_write(arena_t * arena, json_result_t result, size_t * out_len) {
+char * json_write(arena_t * arena, json_result_t result, size_t * out_len) {
 	if(result.root == NULL) {
 		printf("Invalid JSON Data: %s\n", 
 			result.err ? result.err : "(unknown error)");
-		return;
+		return NULL;
 	}
 
 	json_sb_t sb = {
