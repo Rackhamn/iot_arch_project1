@@ -11,7 +11,12 @@ When a given API request comes through we can simply call the function from the 
   
 If this is it not a good option, a strcmp on the URI might be sufficient.  
 Altough, at that point, using versioning is gonna be a little annoying but might still work.  
-
+  
+We will probably use the following "libraries":  
+`RnD/Rackhamn/arena`  
+`RnD/Rackhamn/json`  
+`Github/Rackhamn/sha256_session_id`  
+  
 ## API Examples
 
 ## Client Login Request
