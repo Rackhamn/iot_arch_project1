@@ -87,6 +87,7 @@ Cookie: session_id...
       "description": "Merlin Painting, 120x260cm, name=\"Knight and Devil\"",
       "user_owner": "Bob"
     }
+  ]
 }
 ```
 
