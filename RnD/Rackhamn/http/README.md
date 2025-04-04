@@ -19,6 +19,61 @@ We will probably use the following "libraries":
   
 ## API Examples
 
+## Client Side HTTP + JS
+```http
+<body>
+  <h2>Update Tag Info</h2>
+  
+  <label for="uid">Tag UID:</label>
+  <input type="text" id="uid" placeholder="Tag UID">
+
+  <label for="description">Description</label>
+  <input type="text" id="description" placeholder="Tag Description">
+
+  <label for="username">Username</label>
+  <input type="text" id="username" placeholder="Username">
+
+  <button onclick="updateTag()">Update Tag</button>
+
+  <p id="update_tag_result"></p>
+</body>
+```
+```js
+async function updateTag(uid, newData) {
+    const uid = document.getElementById("uid");
+    const description = document.getElementById("description");
+    const username = document.getElementById("username");
+
+    if(!uid) {
+        document.getElementById("result").innerText = "Error: Tag UID is required!";
+        return;
+    }
+
+    const data = { uid: uid, description: description, username: username };
+
+    try {
+        const response = await fetch("/api/v1/tags/" + uid, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            document.getElementById("result").innerText = "Error: ${result.message}";
+            return;
+        }
+
+        document.getElementById("result").innerText = "Tag updates successfully!";
+    } catch (error) {
+        document.getElementById("result").innerText = "Network Error?!";
+    }
+}
+```
+
 ## Client Login Request
 ```js
 POST /api/v1/login HTTP/1.1
