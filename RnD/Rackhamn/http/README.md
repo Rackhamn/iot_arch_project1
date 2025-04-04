@@ -19,7 +19,7 @@ We will probably use the following "libraries":
   
 ## API Examples
 
-## Client Side HTTP + JS
+## Client Side HTML + JS
 ```html
 <body>
   <h2>Update Tag Info</h2>
