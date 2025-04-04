@@ -9,5 +9,6 @@
 #include "json_make.h"
 #include "json_dump.h"
 #include "json_write.h"
+#include "json_find.h"
 
 #endif /* JSON_H */
