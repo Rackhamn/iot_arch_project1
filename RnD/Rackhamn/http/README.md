@@ -20,7 +20,7 @@ We will probably use the following "libraries":
 ## API Examples
 
 ## Client Login Request
-```json
+```js
 POST /api/v1/login HTTP/1.1
 Host: jats.se
 Content-Type: application/json
@@ -35,7 +35,7 @@ Content-Length: 57
 ```
 
 ### Response (Success)
-```
+```js
 HTTP/1.1 200 OK
 Set-Cookie: session_id=whatever123;
 HttpOnly;
@@ -55,7 +55,7 @@ Content-Type: application/json
 ```
 
 ### Response (Failed)
-```
+```js
 HTTP/1.1 400 Unauthorized
 Content-Type: application/json
 
@@ -66,7 +66,7 @@ Content-Type: application/json
 ```
 
 ## Client get tags request
-```
+```js
 GET /api/v1/tags HTTP/1.1
 Host: jats.se
 Accept: application/json
@@ -74,7 +74,7 @@ Cookie: session_id...
 ```
 
 ### Response (JSON)
-```
+```js
 {
   "tags": [
     {
@@ -91,7 +91,7 @@ Cookie: session_id...
 ```
 
 ## Client add new tag request
-```
+```js
 POST /api/v1/tags HTTP/1.1
 Host: jats.se
 Content-Type: application/json
@@ -108,7 +108,7 @@ Content-Length: XXX
 ```
 
 ### Response (Success)
-```
+```js
 HTTP/1.1 201 Created
 Content-Type: application/json
 
@@ -125,7 +125,7 @@ Content-Type: application/json
 ```
 
 ### Response (Failed)
-```
+```js
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
