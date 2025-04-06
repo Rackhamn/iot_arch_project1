@@ -21,6 +21,9 @@
 // 		change the debug print / log level
 // 		and let task & threads use LOG_printf(level, fmt, ...)
 
+// global state - plz make threaded...
+context_t ctx;
+
 // glibc hasnt added a weapper for gettid on my system...
 // so we now have to do this.
 pid_t gettid(void) {
@@ -99,9 +102,6 @@ void * worker(void * arg) {
 	printf("Thread Worker End: %i\n", tid);
 	return NULL;
 }
-
-// global state - plz make threaded...
-context_t ctx;
 
 char * get_http_method_string(int http_method) {
 	char * string = NULL;
@@ -286,7 +286,16 @@ void handle_client(int socket) {
 	close(socket);
 }
 
-int main() {
+int main(int argc, char ** argv) {
+
+	// parse arguments
+	if(argc < 2) {
+		printf("Not enough arguments!\n");
+		printf("Please add <root-dir>\n");
+		printf("> $http <root-dir>\n");
+		exit(1);
+	}
+
 	/*
 	char * ext = "js";
 	char * mime = get_mime_type(ext);
@@ -302,6 +311,7 @@ int main() {
 
 	signal(SIGINT, sig_handler);
 
+	ctx.root_dir = argv[1];
 
 	ctx.server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if(ctx.server_socket < 0) {

@@ -27,6 +27,8 @@ struct context_s {
 	int client_socket;
 	struct sockaddr_in client_addr;
 	socklen_t client_len;
+
+	char * root_dir; // relative to running directory!!!
 };
 typedef struct context_s context_t;
 
