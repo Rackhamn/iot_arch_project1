@@ -7,7 +7,7 @@
 
 #include "http.h"
 
-// global state
+// global state - plz make threaded...
 context_t ctx;
 
 char * get_http_method_string(int http_method) {
@@ -148,6 +148,40 @@ void sig_handler(int sig) {
 		printf("\n ### INTERRUPT ###\n");
 		cleanup_and_exit(1);
 	}
+}
+
+void handle_client(int socket) {
+	// maybe this size has to be bigger?
+	// or in an incrementing buffer?
+	char buffer[BUFFER_SIZE] = { 0 };
+	int bytes_read = read(socket, buffer, sizeof(buffer) - 1);
+	if(bytes_read < 0) {
+		printf("client read error\n");
+		close(socket);
+		return;
+	}
+	buffer[bytes_read] = '\0';
+
+	// dump request
+	printf("\n ### CLIENT REQUEST ###\n");
+	printf("%s\n", buffer);
+	printf(" ### END ###\n");
+
+
+	// response
+	char * response = 
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Type: text/html\r\n"
+		"Connection: close\r\n"
+		"\r\n"
+		"<!DOCTYPE html>"
+		"<html><head><title>JATS - C HTTP Server</title></head>"
+		"<body><h1>Welcome to JATS<h1></br><p>Jensen Asset Tracking System<p></body>"
+		"</html>";
+
+	write(socket, response, strlen(response)); 
+
+	close(socket);
 }
 
 int main() {
