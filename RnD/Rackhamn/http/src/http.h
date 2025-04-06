@@ -17,7 +17,7 @@
 #endif
 
 
-enum HTTP_METHODS = {
+enum HTTP_METHODS {
 	// idempotent: making the same request multiple times results in the same effect as making it once.
 	POST,	// Submit data to a resource or API call. not idempotent
 	GET,	// Retrieve a resource. idempotent
@@ -30,8 +30,9 @@ enum HTTP_METHODS = {
 	CONNECT	// Estrablish a tunnel to the server (ex: HTTPS over proxy) Used by browsers and proxies.
 };
 
-inline char * get_http_method_string(int http_method);
+inline const char * get_http_method_string(int http_method);
 inline size_t get_http_method_string_size(int http_method);
+inline const char * get_mime_type(const char * ext);
 
 int run_server();
 

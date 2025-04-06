@@ -1,27 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "http.h"
 
-
-
-
-enum HTTP_METHODS = {
-	// idempotent: making the same request multiple times results in the same effect as making it once.
-	POST,	// Submit data to a resource or API call. not idempotent
-	GET,	// Retrieve a resource. idempotent
-	PUT,	// Replace a resource or create if not exist. idempotent
-	DELETE,	// Remove a resource. idempotent (depending on impl.)
-	PATCH,	// Apply a partial update to a resource. not always idempotent
-	HEAD,	// Like GET, but only retrieves headers (no body). useful for checking if resource exists.
-	OPTIONS,// Ask the server what methods are supported for a resource. (ex: CORS preflight request)
-	TRACE,	// Echo the recieved request. for debugging, rarely used.
-	CONNECT	// Estrablish a tunnel to the server (ex: HTTPS over proxy) Used by browsers and proxies.
-};
-
 inline 
 const char * get_http_method_string(int http_method) {
-	const char * string = "";
+	const char * string = NULL;
 	switch(http_method) {
 		case POST:
 		string = "POST";
@@ -49,9 +34,6 @@ const char * get_http_method_string(int http_method) {
 		break;
 		case CONNECT:
 		string = "CONNECT";
-		break;
-		default:
-		string = "";
 		break;
 	}	
 
@@ -97,4 +79,55 @@ size_t get_http_method_string_size(int http_method) {
 	return size;
 }
 
+struct mime_type_s {
+	const char * ext;
+	const char * mime;
+};
+typedef struct mime_type_s mime_type_t;
 
+#define MIME_TYPE(ext, mime) (mime_type_t){ext, mime}
+
+const mime_type_t mime_type_table[] = {
+	MIME_TYPE("html", "text/html"),
+	MIME_TYPE("htm", "text/html"),
+	MIME_TYPE("js", "text/javascript"),
+	MIME_TYPE("css", "text/css"),
+	MIME_TYPE("json", "application/json"),
+	MIME_TYPE("jpg", "image/jpeg"),
+	MIME_TYPE("jpeg", "image/jpeg"),
+	MIME_TYPE("png", "image/png"),
+	MIME_TYPE("svg", "image/svg+xml"),
+	MIME_TYPE("webp", "image/webp"),
+	MIME_TYPE("fav", "image/x-icon"),
+	MIME_TYPE("gif", "image/gif"),
+	MIME_TYPE("txt", "text/plain"),
+	MIME_TYPE("wav", "audio/wav"),
+	MIME_TYPE("ogg", "audio/ogg"),	// video/ogg
+	MIME_TYPE("mp3", "audio/mpeg"),
+	MIME_TYPE("mp4", "video/mp4"),
+	MIME_TYPE("webm", "video/webm"),
+	MIME_TYPE("zip", "application/zip"),
+	MIME_TYPE("pdf", "application/pdf"),
+	MIME_TYPE("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), // wow...
+};
+
+inline 
+const char * get_mime_type(const char * ext) {
+	if(ext == NULL) {
+		return "application/octect-stream";
+	}
+
+	size_t mime_table_size = sizeof(mime_type_table);
+	for(size_t i = 0; i < mime_table_size; i++) {
+		if(strcmp(ext, mime_type_table[i].ext) == 0) {
+			return mime_type_table[i].mime;
+		}
+	}
+
+	return "application/octect-stream";
+}
+
+
+int main() {
+	return 0;
+}
