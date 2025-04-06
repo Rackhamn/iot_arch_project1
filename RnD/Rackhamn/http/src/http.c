@@ -4,9 +4,8 @@
 
 #include "http.h"
 
-inline 
-const char * get_http_method_string(int http_method) {
-	const char * string = NULL;
+char * get_http_method_string(int http_method) {
+	char * string = NULL;
 	switch(http_method) {
 		case POST:
 		string = "POST";
@@ -40,7 +39,6 @@ const char * get_http_method_string(int http_method) {
 	return string;
 }
 
-inline
 size_t get_http_method_string_size(int http_method) {
 	size_t size;
 	switch(http_method) {
@@ -80,12 +78,13 @@ size_t get_http_method_string_size(int http_method) {
 }
 
 struct mime_type_s {
+	size_t ext_size;
 	const char * ext;
 	const char * mime;
 };
 typedef struct mime_type_s mime_type_t;
 
-#define MIME_TYPE(ext, mime) (mime_type_t){ext, mime}
+#define MIME_TYPE(ext, mime) (mime_type_t){sizeof(ext), ext, mime}
 
 const mime_type_t mime_type_table[] = {
 	MIME_TYPE("html", "text/html"),
@@ -111,16 +110,15 @@ const mime_type_t mime_type_table[] = {
 	MIME_TYPE("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), // wow...
 };
 
-inline 
-const char * get_mime_type(const char * ext) {
+char * get_mime_type(char * ext) {
 	if(ext == NULL) {
 		return "application/octect-stream";
 	}
 
 	size_t mime_table_size = sizeof(mime_type_table);
 	for(size_t i = 0; i < mime_table_size; i++) {
-		if(strcmp(ext, mime_type_table[i].ext) == 0) {
-			return mime_type_table[i].mime;
+		if(strncmp(ext, mime_type_table[i].ext, mime_type_table[i].ext_size) == 0) {
+			return (char*)mime_type_table[i].mime;
 		}
 	}
 
@@ -129,5 +127,10 @@ const char * get_mime_type(const char * ext) {
 
 
 int main() {
+	char * ext = "js";
+	char * mime = get_mime_type(ext);
+	printf("ext -> mime\n%s -> %s\n", 
+		ext, mime);
+
 	return 0;
 }
