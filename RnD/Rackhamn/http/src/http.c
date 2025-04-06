@@ -311,7 +311,36 @@ int main(int argc, char ** argv) {
 
 	signal(SIGINT, sig_handler);
 
-	ctx.root_dir = argv[1];
+
+	char cwd_buffer[256] = { 0 };
+	char * _cwd = getcwd(cwd_buffer, 256);
+
+	// TODO: merge cwd + rel root dir into one path plz
+	char rel_root_dir[256] = { 0 };
+	// trash
+	{
+		int index = 0;
+		if(argv[1][0] != '/') {
+			rel_root_dir[index++] = '/';
+		}
+		
+		ctx.root_dir = argv[1];
+		size_t root_dir_len = strlen(ctx.root_dir);
+		memcpy(rel_root_dir + index, ctx.root_dir, root_dir_len);
+		index += root_dir_len;
+
+		// depending on the website structure we might not need this at all
+#if 0
+		if(rel_root_dir[index] != '/') {
+			rel_root_dir[index++] = '/';
+			rel_root_dir[index++] = '\0';
+		}
+#endif
+		ctx.root_dir = rel_root_dir;
+	}
+
+	printf("root-dir (rel)  = \"%s\"\n", ctx.root_dir);
+	printf("root-dir (path) = \"%s\" + \"%s\"\n", _cwd, ctx.root_dir);
 
 	ctx.server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if(ctx.server_socket < 0) {
