@@ -16,6 +16,15 @@
 #define MAX_THREADS	4
 #endif
 
+struct context_s {
+	int server_socket;
+	struct sockaddr_in server_addr;
+
+	int client_socket;
+	struct sockaddr_in client_addr;
+	socklen_t client_len;
+};
+typedef struct context_s context_t;
 
 enum HTTP_METHODS {
 	// idempotent: making the same request multiple times results in the same effect as making it once.
