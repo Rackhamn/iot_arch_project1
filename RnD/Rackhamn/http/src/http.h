@@ -16,6 +16,10 @@
 #define MAX_THREADS	4
 #endif
 
+#ifndef MAX_QUEUE
+#define MAX_QUEUE	64
+#endif
+
 struct context_s {
 	int server_socket;
 	struct sockaddr_in server_addr;
@@ -42,6 +46,8 @@ enum HTTP_METHODS {
 char * get_http_method_string(int http_method);
 size_t get_http_method_string_size(int http_method);
 char * get_mime_type(char * ext);
+
+void handle_client(int socket); 
 
 int run_server();
 

@@ -2,10 +2,103 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <unistd.h>
+// #define _GNU_SOURCE
+#include <unistd.h> // gettid()
+#include <pthread.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
 
 #include "http.h"
+
+// TODO:
+// 	add CLI interface 
+// 		change the debug print / log level
+// 		and let task & threads use LOG_printf(level, fmt, ...)
+
+// glibc hasnt added a weapper for gettid on my system...
+// so we now have to do this.
+pid_t gettid(void) {
+	return syscall(SYS_gettid);
+}
+
+int task_queue[MAX_QUEUE];
+int task_front = 0;
+int task_rear = 0;
+int task_count = 0;
+
+volatile sig_atomic_t running = 1;
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+
+void task_enqueue(int client) {
+	// printf("enqueue\n");
+	pthread_mutex_lock(&queue_mutex);
+	while(task_count == MAX_QUEUE && running == 1) {
+		pthread_cond_wait(&queue_cond, &queue_mutex);
+	}
+
+	if(running == 0) {
+		pthread_mutex_unlock(&queue_mutex);
+		close(client);
+		return;
+	}
+
+	// printf("push client socket\n");
+	task_queue[task_rear] = client;
+	task_rear = (task_rear + 1) % MAX_QUEUE;
+	task_count += 1;
+
+	// printf("enqueue unlock\n");
+	pthread_cond_signal(&queue_cond);
+	pthread_mutex_unlock(&queue_mutex);
+}
+
+int task_dequeue() {
+	// printf("dequeue\n");
+	pthread_mutex_lock(&queue_mutex);
+	while(task_count == 0 && running == 1) {
+		pthread_cond_wait(&queue_cond, &queue_mutex);
+	}
+
+	if(running == 0 && task_count == 0) {
+		pthread_mutex_unlock(&queue_mutex);
+		return -1;
+	}
+
+	// printf("get client socket\n");
+	int client = task_queue[task_front];
+	task_front = (task_front + 1) % MAX_QUEUE;
+	task_count -= 1;
+
+	// printf("dequeue unlock\n");
+	pthread_cond_signal(&queue_cond);
+	pthread_mutex_unlock(&queue_mutex);
+
+	// printf("return client socket\n");
+	return client;
+}
+
+void * worker(void * arg) {
+	pid_t tid = gettid();
+	printf("Thread Worker Start: %i\n", tid);
+	while(1) {
+		int client = task_dequeue();
+		
+		if(client < 0) {
+			break;
+		}
+
+		handle_client(client);		
+	}
+	printf("Thread Worker End: %i\n", tid);
+	return NULL;
+}
 
 // global state - plz make threaded...
 context_t ctx;
@@ -146,11 +239,20 @@ void cleanup_and_exit(int rval) {
 void sig_handler(int sig) {
 	if(sig == SIGINT) {
 		printf("\n ### INTERRUPT ###\n");
-		cleanup_and_exit(1);
+
+		(void)sig;
+		running = 0;
+		pthread_cond_broadcast(&queue_cond); // wake all threads!
+
+		// cleanup_and_exit(1);
 	}
 }
 
 void handle_client(int socket) {
+	if(socket <= 0) {
+		printf("client socket error!\n");
+		return;
+	}
 	// maybe this size has to be bigger?
 	// or in an incrementing buffer?
 	char buffer[BUFFER_SIZE] = { 0 };
@@ -163,9 +265,9 @@ void handle_client(int socket) {
 	buffer[bytes_read] = '\0';
 
 	// dump request
-	printf("\n ### CLIENT REQUEST ###\n");
+	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
 	printf("%s\n", buffer);
-	printf(" ### END ###\n");
+	printf(" ### CLIENT REQUEST : END ###\n");
 
 
 	// response
@@ -191,6 +293,9 @@ int main() {
 	printf("ext -> mime\n%s -> %s\n", 
 		ext, mime);
 	*/
+
+	pid_t server_pid = getpid();
+	printf(" ### BEGIN : %i ###\n", server_pid);
 
 	memset(&ctx, 0, sizeof(context_t));
 	ctx.client_len = sizeof(ctx.client_addr);
@@ -223,18 +328,51 @@ int main() {
 
 	printf("Server running on http://localhost:%d\n", PORT);
 
-	while(1) {
-		ctx.client_socket = accept(ctx.server_socket, (struct sockaddr *)&ctx.client_addr, &ctx.client_len);
-		if(ctx.client_socket < 0) {
-			printf("Accept failed!\n");
+	pthread_t threads[MAX_THREADS];
+	for(int i = 0; i < MAX_THREADS; i++) {
+		pthread_create(&threads[i], NULL, worker, NULL);
+		pthread_detach(threads[i]);
+	}
+
+	while(running) {
+#if 1
+		fd_set fds;
+		FD_ZERO(&fds);
+		FD_SET(ctx.server_socket, &fds);
+
+		struct timeval tv = { .tv_sec = 1, .tv_usec = 0 }; // 1 sec
+		int res = select(ctx.server_socket + 1, &fds, NULL, NULL, &tv);
+
+		if(res < 0) {
+			// printf("server timeout error\n");
+			break;
+		}
+		
+		if(res == 0) {
+			// printf("server timeout\n");
 			continue;
+		}
+#endif	
+
+		ctx.client_socket = accept(ctx.server_socket, (struct sockaddr *)&ctx.client_addr, &ctx.client_len);
+		if(ctx.client_socket >= 0) {
+			task_enqueue(ctx.client_socket);
 		}
 
 		// handle client :)
-		handle_client(ctx.client_socket);
+		// task_enqueue(ctx.client_socket);
+		// handle_client(ctx.client_socket);
 	}
 
+	/* explicit cleanup
+	for(int i = 0; i < MAX_THREADS; i++) {
+		(void)pthread_join(threads[i], NULL);
+	}
+	*/
+	
+	printf("close server socket\n");
 	close(ctx.server_socket);
 
+	printf(" ### Quit : %i ###\n", server_pid);
 	return 0;
 }
