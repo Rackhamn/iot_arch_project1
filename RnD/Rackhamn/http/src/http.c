@@ -103,7 +103,7 @@ const mime_type_t mime_type_table[] = {
 	MIME_TYPE("png", "image/png"),
 	MIME_TYPE("svg", "image/svg+xml"),
 	MIME_TYPE("webp", "image/webp"),
-	MIME_TYPE("fav", "image/x-icon"),
+	MIME_TYPE("ico", "image/x-icon"), // favicon
 	MIME_TYPE("gif", "image/gif"),
 	MIME_TYPE("txt", "text/plain"),
 	MIME_TYPE("wav", "audio/wav"),
@@ -204,6 +204,9 @@ int main() {
 		exit(1);
 	}
 
+	int opt = 1;
+	setsockopt(ctx.server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
 	ctx.server_addr.sin_family = AF_INET;
 	ctx.server_addr.sin_addr.s_addr = INADDR_ANY;
 	ctx.server_addr.sin_port = htons(PORT);
@@ -228,6 +231,7 @@ int main() {
 		}
 
 		// handle client :)
+		handle_client(ctx.client_socket);
 	}
 
 	close(ctx.server_socket);
