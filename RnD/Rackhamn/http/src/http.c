@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 
+#include "../../arena/arena.h"
+
 #include "http.h"
 
 #include "favicon.h"
@@ -38,11 +40,36 @@
 // 		authorize with cookie
 // 	non-blocking sockkets
 //	keep a single copy per file in RAM + path match (READONLY)
+//			PROT_READ + mmap()
 //		make each file fit in a pow2 or +page sized buffer
 //		> that way we can reload it into the same buffer (maybe needs a lock?)
 //		> or double buffering ;)
 //	load all files on startup
+//		use inotify to hotreload
 //	HTTPS + fake SSL cert?
+
+struct file_cache_entry_s {
+	uint32_t path_offset;
+	size_t path_size;
+
+	uint32_t data_offset;
+	size_t data_size;
+};
+typedef struct file_cache_entry_s fc_entry_t;
+
+#define FC_ENTRY_ZERO()	(fc_entry_t){ 0, 0, 0, 0 }
+#define GET_FC_PATH(fc, entry) (char*)(fc.arena.data + entry.path_offset)
+#define GET_FC_DATA(fc, entry) (char*)(fc.arena.data + entry.data_offset)
+
+#define MAX_FILE_CACHE_SIZE	16
+struct file_cache_s {
+	arena_t * arena;
+	uint32_t num_files;
+	fc_entry_t files[MAX_FILE_CACHE_SIZE];
+};
+typedef struct file_cache_s fc_t;
+
+
 
 
 // global state - plz make threaded...
@@ -620,11 +647,11 @@ void handle_client(int socket) {
 	}
 
 	// routing plz
-	if(strncmp(path, "/api", 4) == 0) {
+	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
 		printf("API CALL\n");
 		// API CALL maybe
 		char response[4096];
-		char * json_response = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\"}}";
+		char * json_response = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
 
 		int response_len = 0;
 		response_len = snprintf(response, sizeof(response),
