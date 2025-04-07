@@ -1,3 +1,7 @@
+function insertAfter(node, ref) {
+	ref.parentNode.insertBefore(node, ref.nextSibling);
+}
+
 async function updateTag(uid, newData) {
     const xuid = document.getElementById("uid");
     const description = document.getElementById("description");
@@ -30,7 +34,19 @@ async function updateTag(uid, newData) {
             return;
         }
 
-        document.getElementById("result").innerText = "Tag updated successfully!";
+	result_text = "";
+        if(result.data.img !== undefined) {
+		result_text += "<img href=\"http://localhost:8082" + result.data.img + "\">";
+		var img = document.createElement("img");
+		img.src = result.data.img;
+		img.alt = "cat black";
+
+		insertAfter(img, document.getElementById("result"));
+
+	} else {
+		// result_text += "Tag updated successfully!";
+	}
+	document.getElementById("result").innerText = "Tag updated successfully!";
     } catch (error) {
         document.getElementById("result").innerText = "Network Error?!";
     }
