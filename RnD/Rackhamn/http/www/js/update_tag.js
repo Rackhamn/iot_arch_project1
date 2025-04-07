@@ -1,14 +1,18 @@
 async function updateTag(uid, newData) {
-    const uid = document.getElementById("uid");
+    const xuid = document.getElementById("uid");
     const description = document.getElementById("description");
     const username = document.getElementById("username");
 
-    if(!uid) {
+    if(!xuid) {
         document.getElementById("result").innerText = "Error: Tag UID is required!";
         return;
     }
 
-    const data = { uid: uid, description: description, username: username };
+    const data = { 
+	    uid: xuid.value, 
+	    description: description.value, 
+	    username: username.value
+    };
 
     try {
         const response = await fetch("/api/v1/tags/", {
