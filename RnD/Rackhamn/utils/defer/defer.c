@@ -4,6 +4,9 @@
 
 // GCC defer like macro as seen in GO
 // Jens Gustedt's Blog "Simple defer, ready to use", Jan 6 - 2025
+// * https://gustedt.wordpress.com/2020/12/14/a-defer-mechanism-for-c/
+// * https://gustedt.wordpress.com/2025/01/06/simple-defer-ready-to-use/
+// * https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3434.htm
 
 void defer_printf(int * value) {
 	printf("value: %i\n", *value);
