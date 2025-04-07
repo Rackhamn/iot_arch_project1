@@ -458,6 +458,7 @@ typedef struct mime_type_s mime_type_t;
 
 #define MIME_TYPE(ext, mime) (mime_type_t){sizeof(ext), ext, mime}
 
+// make htable?
 const mime_type_t mime_type_table[] = {
 	MIME_TYPE("html", "text/html"),
 	MIME_TYPE("htm", "text/html"),
@@ -536,48 +537,49 @@ ROOT_DIR + "/img/*.svg"
 // TODO: move into code indexed mapped table
 #define STRLEN(s) (sizeof(s) - 1)
 
-char * response_404 = "HTTP/1.1 404 File Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
-size_t response_404_len = STRLEN(response_404);
-
-char * response_500 = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 21\r\n\r\nInternal Server Error";
-size_t response_500_len = STRLEN(response_500);
-
-void send_response_500(int socket) {
-	write(socket, response_500, response_500_len);
+void http_send_401(int socket) {
+	dprintf(socket, "HTTP/1.1 401 Bad Request\r\n\r\n");
 }
 
-void send_response_404(int socket) {
-	write(socket, response_404, response_404_len);
+void http_send_404(int socket) {
+	dprintf(socket, "HTTP/1.1 404 File Not Found\r\n\r\n");
 }
 
-void load_and_send_file(int socket, char * mime, char * path) {
+void http_send_500(int socket) {
+	dprintf(socket, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+}
+
+void http_send(int socket, int code, char * response, char * mime_type, uint8_t * data, size_t data_size) {
+	dprintf(socket, "HTTP/1.1 %d %s\r\n", code, response);
+	dprintf(socket, "Content-Type: %s\r\n", mime_type);
+	dprintf(socket, "Content-Length: %zu\r\n", data_size);
+	dprintf(socket, "\r\n");
+
+	if(data != NULL) {
+		write(socket, data, data_size);
+	}
+}
+
+// dont like this function
+void load_and_send_file(int socket, char * mime_type, char * path) {
 	int fd = open(path, O_RDONLY);
 	if(fd < 0) {
-		write(socket, response_404, response_404_len);
+		// if mime_type == html -> send page_404.html instead ;)
+		http_send_404(socket);
 		return;
 	}
 
 	struct stat st;
 	if(fstat(fd, &st) == -1) {
 		close(fd);
-		write(socket, response_500, response_500_len);
+		http_send_500(socket);
 		return;
 	}
 
-	char header[512];
-	size_t header_len = snprintf(header, sizeof(header),
-			"HTTP/1.1 200 OK\r\n"
-			"Content-Type: %s\r\n"
-			"Content-Length: %zu\r\n"
-			"Connection: close\r\n"
-			"\r\n",
-			mime, st.st_size);
-
-	write(socket, header, header_len);
+	http_send(socket, 200, "OK", mime_type, NULL, st.st_size);
 
 	char buffer[1024];
 	ssize_t n;
-
 	while((n = read(fd, buffer, sizeof(buffer))) > 0) {
 		write(socket, buffer, n);
 	}
@@ -585,6 +587,7 @@ void load_and_send_file(int socket, char * mime, char * path) {
 	close(fd);
 }
 
+// maybe cpy it out?
 char * get_ext(char * str) {
 	char * final_period = NULL;
 
@@ -614,68 +617,37 @@ void handle_client(int socket) {
 	}
 	buffer[bytes_read] = '\0';
 
+#if 0
 	// dump request
 	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
 	printf("%s\n", buffer);
 	printf(" ### CLIENT REQUEST : END ###\n");
+#endif
 
 	char method[16];
 	char path[512];
 	char version[16];
 	char file_path[1024];
 
+	// not safe - plz do an actual parse
 	sscanf(buffer, "%s %s %s", method, path, version);
 	printf("method: %s\n", method);
 	printf("path: %s\n", path);
 	printf("version: %s\n", version);
 
-
+	// use strncmp or a known cmp
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
-		// hack special	
-		char response[1024];
-
-		snprintf(response, sizeof(response),
-			"%s\r\n"
-			"Content-Type: %s\r\n"
-			"Content-Length: %zu\r\n"
-			"\r\n",
-
-			"HTTP/1.1 200 OK",
-			"image/x-icon",
-			sizeof(favicon_icox));
-
-		printf("response: %s\n", response);
-
-		write(socket, response, strlen(response));
-		write(socket, favicon_icox, sizeof(favicon_icox));
-
+		http_send(socket, 200, "OK", "image/x-ixon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
 		printf("FAVICON SENT!\n");
 		close(socket);
-
 		return;
 	}
 
-#if 0
+#if 1
 	if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
 		// send from ram :)
-		char response[1024];
-
-                snprintf(response, sizeof(response),
-                        "%s\r\n"
-                        "Content-Type: %s\r\n"
-                        "Content-Length: %zu\r\n"
-                        "\r\n",
-
-                        "HTTP/1.1 200 OK",
-                        "image/jpeg",
-                        cat_large_img_data_size);
-
-                printf("response: %s\n", response);
-
-                write(socket, response, strlen(response));
-                write(socket, cat_large_img_data, cat_large_img_data_size);
-
+		http_send(socket, 200, "OK", "image/jpeg", (uint8_t*)cat_large_img_data, cat_large_img_data_size);
                 printf("CAT RAM SENT!\n");
                 close(socket);
 
@@ -704,20 +676,10 @@ void handle_client(int socket) {
 	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
 		printf("API CALL\n");
 		// API CALL maybe
-		char response[4096];
-		char * json_response = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
+		char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
+		size_t json_len = strlen(json_data);
 
-		int response_len = 0;
-		response_len = snprintf(response, sizeof(response),
-			"HTTP/1.1 200 OK\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: %zu\r\n"
-			"\r\n"
-			"%s",
-			strlen(json_response),
-			json_response);
-
-		write(socket, response, response_len);
+		http_send(socket, 200, "OK", "application/json", (uint8_t*)json_data, json_len);
 		close(socket);
 		return;
 	}
@@ -728,8 +690,7 @@ void handle_client(int socket) {
 		printf("API CALL\n");
 		// maybe its an api call...
 		// check that or fail
-		char * response = "HTTP/1.1 401 Bad Request\r\n\r\n";
-		write(socket, response, strlen(response));
+		http_send_401(socket);
 		close(socket);
 		return;
 	}
@@ -738,7 +699,7 @@ void handle_client(int socket) {
 	char * mime_type = get_mime_type(ext);
 	printf("MIME: %s -> %s\n", ext, mime_type);
 	if(mime_type == NULL) {
-		send_response_404(socket);
+		http_send_404(socket);
 		close(socket);
 		return;
 	}
@@ -819,6 +780,7 @@ ROOT_DIR + "/img/*.svg"
 int main(int argc, char ** argv) {
 
 	// parse arguments
+	// TODO: handle opts corectly!!
 	if(argc < 2) {
 		printf("Not enough arguments!\n");
 		printf("Please add <root-dir>\n");
