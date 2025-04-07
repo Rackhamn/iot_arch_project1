@@ -656,6 +656,7 @@ void handle_client(int socket) {
 		return;
 	}
 
+#if 0
 	if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
 		// send from ram :)
 		char response[1024];
@@ -680,6 +681,24 @@ void handle_client(int socket) {
 
                 return;
 	}
+#endif
+
+// we do a lot of strcmp & strncmp
+// we also know that many of them are of a certain size (knwon)
+// PUT -> P U T
+// #define SPLIT_PUT	'P', 'U', 'T'
+// then we can use more specific cmp
+// #define STRCMP3(a, b) (a[0] == b[0] && a[1] == b[1] && a[2] == b[2])
+// #define STRCMP3(s, c0, c1, c2) (s[0] == c0 && s[1] == c1 && s[2] == c2)
+//	maybe using sub4 bytes is not great... add a ' ' to the c3? (without checking it)
+//
+// we also need to sanitize the method
+// if((ch < 'A' || ch > 'Z') && ch != '_' && ch != '-') { invalid!!! }
+//
+// maybe caching the filepath is not what we want.
+// it might be better to cache the actual http request instead?
+// 
+// maybe we can put in async io (posic aio.h) for stream reading files
 
 	// routing plz
 	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
