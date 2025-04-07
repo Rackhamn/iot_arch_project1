@@ -33,7 +33,17 @@
 // 	use epoll
 // 	use events
 // 	store sessions and active clients
+// 		send set cookie on new session
+// 		use HttpOnly & Secure & SameSite=Strict
+// 		authorize with cookie
 // 	non-blocking sockkets
+//	keep a single copy per file in RAM + path match (READONLY)
+//		make each file fit in a pow2 or +page sized buffer
+//		> that way we can reload it into the same buffer (maybe needs a lock?)
+//		> or double buffering ;)
+//	load all files on startup
+//	HTTPS + fake SSL cert?
+
 
 // global state - plz make threaded...
 context_t ctx;
