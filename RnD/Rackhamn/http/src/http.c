@@ -29,6 +29,12 @@
 // 	use RAM as cache for the files
 // 	and reload them on change!
 
+// TODO:
+// 	use epoll
+// 	use events
+// 	store sessions and active clients
+// 	non-blocking sockkets
+
 // global state - plz make threaded...
 context_t ctx;
 uint8_t favicon_ico[FAVICON_BUF_SIZE] = { 0 };
@@ -604,9 +610,31 @@ void handle_client(int socket) {
 	}
 
 	// routing plz
+	if(strncmp(path, "/api", 4) == 0) {
+		printf("API CALL\n");
+		// API CALL maybe
+		char response[4096];
+		char * json_response = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\"}}";
+
+		int response_len = 0;
+		response_len = snprintf(response, sizeof(response),
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: application/json\r\n"
+			"Content-Length: %zu\r\n"
+			"\r\n"
+			"%s",
+			strlen(json_response),
+			json_response);
+
+		write(socket, response, response_len);
+		close(socket);
+		return;
+	}
+	
 	char * ext = NULL;
 	ext = get_ext(path);
 	if(ext == NULL) {
+		printf("API CALL\n");
 		// maybe its an api call...
 		// check that or fail
 		char * response = "HTTP/1.1 401 Bad Request\r\n\r\n";

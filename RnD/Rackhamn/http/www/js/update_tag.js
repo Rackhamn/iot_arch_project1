@@ -30,7 +30,7 @@ async function updateTag(uid, newData) {
             return;
         }
 
-        document.getElementById("result").innerText = "Tag updates successfully!";
+        document.getElementById("result").innerText = "Tag updated successfully!";
     } catch (error) {
         document.getElementById("result").innerText = "Network Error?!";
     }
