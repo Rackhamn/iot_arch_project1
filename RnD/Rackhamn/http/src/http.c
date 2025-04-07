@@ -47,7 +47,8 @@
 //	load all files on startup
 //		use inotify to hotreload
 //	HTTPS + fake SSL cert?
-
+//	whitelist / blacklist for directories and files (dont want traveral exploits)
+//
 struct file_cache_entry_s {
 	uint32_t path_offset;
 	size_t path_size;
@@ -70,6 +71,9 @@ struct file_cache_s {
 typedef struct file_cache_s fc_t;
 
 
+char * cat_large_img_data = NULL;
+char * cat_large_img_path = NULL;
+size_t cat_large_img_data_size = 0;
 
 
 // global state - plz make threaded...
@@ -300,6 +304,7 @@ int task_count = 0;
 volatile sig_atomic_t running = 1;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+pthread_barrier_t barrier;
 
 void task_enqueue(int client) {
 	// printf("enqueue\n");
@@ -361,6 +366,11 @@ void * worker(void * arg) {
 
 		handle_client(client);		
 	}
+
+#if 0
+	printf("Thread await barrier: %i\n", tid);
+	pthread_barrier_wait(&barrier);
+#endif
 	printf("Thread Worker End: %i\n", tid);
 	return NULL;
 }
@@ -477,14 +487,14 @@ char * get_mime_type(char * ext) {
 		return "application/octect-stream";
 	}
 
-	size_t mime_table_size = sizeof(mime_type_table);
+	size_t mime_table_size = sizeof(mime_type_table) / sizeof(mime_type_table[0]);
 	for(size_t i = 0; i < mime_table_size; i++) {
 		if(strncmp(ext, mime_type_table[i].ext, mime_type_table[i].ext_size) == 0) {
 			return (char*)mime_type_table[i].mime;
 		}
 	}
 
-	return "application/octect-stream";
+	return NULL;// "application/octect-stream";
 }
 
 void cleanup_and_exit(int rval) {
@@ -623,7 +633,7 @@ void handle_client(int socket) {
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
 		// hack special	
-		char response[4096];
+		char response[1024];
 
 		snprintf(response, sizeof(response),
 			"%s\r\n"
@@ -644,6 +654,31 @@ void handle_client(int socket) {
 		close(socket);
 
 		return;
+	}
+
+	if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
+		// send from ram :)
+		char response[1024];
+
+                snprintf(response, sizeof(response),
+                        "%s\r\n"
+                        "Content-Type: %s\r\n"
+                        "Content-Length: %zu\r\n"
+                        "\r\n",
+
+                        "HTTP/1.1 200 OK",
+                        "image/jpeg",
+                        cat_large_img_data_size);
+
+                printf("response: %s\n", response);
+
+                write(socket, response, strlen(response));
+                write(socket, cat_large_img_data, cat_large_img_data_size);
+
+                printf("CAT RAM SENT!\n");
+                close(socket);
+
+                return;
 	}
 
 	// routing plz
@@ -683,7 +718,11 @@ void handle_client(int socket) {
 	ext++;
 	char * mime_type = get_mime_type(ext);
 	printf("MIME: %s -> %s\n", ext, mime_type);
-
+	if(mime_type == NULL) {
+		send_response_404(socket);
+		close(socket);
+		return;
+	}
 
 /*
 ROOT_DIR = "./www"
@@ -730,6 +769,15 @@ ROOT_DIR + "/img/*.svg"
 
 	}
 
+/*
+	if(_root_dir == NULL || _sub_dir == NULL || real_path[0] == 0) {
+		printf("ERROR\n");
+		send_response_404(socket);
+		close(socket);
+		return;
+	}
+*/
+
 	load_and_send_file(socket, mime_type, real_path);	
 	
 #if 0
@@ -757,6 +805,27 @@ int main(int argc, char ** argv) {
 		printf("Please add <root-dir>\n");
 		printf("> $http <root-dir>\n");
 		exit(1);
+	}
+
+
+
+	{
+	cat_large_img_data = malloc(1024 + (1 * 1000 * 1000)); // 1MB why not
+	cat_large_img_path = cat_large_img_data;
+	cat_large_img_data += 1024;
+
+	{
+		char * _path = "www/img/cat_large_img.jpg";
+		FILE * fp = fopen(_path, "rb");
+		fseek(fp, 0, SEEK_END);
+		cat_large_img_data_size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		fread(cat_large_img_data, cat_large_img_data_size, 1, fp);
+		fclose(fp);
+
+		memcpy(cat_large_img_path, _path + 3, strlen(_path) - 3);
+	}
 	}
 
 	/*
@@ -857,10 +926,19 @@ int main(int argc, char ** argv) {
 		printf("\n\n");
 	}
 
+	// pthread_barrier_init(&barrier, NULL, MAX_THREADS);
 	pthread_t threads[MAX_THREADS];
 	for(int i = 0; i < MAX_THREADS; i++) {
+		/*
+		pthread_attr_t pt_attr;
+
+		pthread_attr_init(&pt_attr);
+		pthread_attr_setdetachstate(&pt_attr, PTHREAD_CREATE_DETACHED);
+*/
 		pthread_create(&threads[i], NULL, worker, NULL);
-		pthread_detach(threads[i]);
+
+//		pthread_attr_destroy(&pt_attr);
+//		pthread_detach(threads[i]);
 	}
 
 	while(running) {
@@ -893,14 +971,24 @@ int main(int argc, char ** argv) {
 		// handle_client(ctx.client_socket);
 	}
 
-	/* explicit cleanup
+	/* explicit cleanup */
 	for(int i = 0; i < MAX_THREADS; i++) {
 		(void)pthread_join(threads[i], NULL);
 	}
-	*/
 	
+
 	printf("close server socket\n");
 	close(ctx.server_socket);
+
+#if 0
+	printf("await barrier\n");
+	pthread_barrier_wait(&barrier);
+	printf("all threads are finished!\n");
+	pthread_barrier_destroy(&barrier);
+#endif
+
+	memset(cat_large_img_path, 0, 1024 + (1 * 1000 * 1000));
+	free(cat_large_img_path);
 
 	printf(" ### Quit : %i ###\n", server_pid);
 	return 0;
