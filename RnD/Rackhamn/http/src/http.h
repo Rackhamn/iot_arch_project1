@@ -9,7 +9,7 @@
 #endif
 
 #ifndef BUFFER_SIZE
-#define BUFFER_SIZE	4096
+#define BUFFER_SIZE	8192
 #endif
 
 #ifndef MAX_THREADS
@@ -17,7 +17,7 @@
 #endif
 
 #ifndef MAX_QUEUE
-#define MAX_QUEUE	64
+#define MAX_QUEUE	128
 #endif
 
 struct context_s {
