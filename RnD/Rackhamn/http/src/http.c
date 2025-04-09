@@ -16,6 +16,7 @@
 
 #include "../../arena/arena.h"
 
+#include "sha256.h"
 #include "http.h"
 
 #include "favicon.h"
@@ -75,6 +76,13 @@ char * cat_large_img_data = NULL;
 char * cat_large_img_path = NULL;
 size_t cat_large_img_data_size = 0;
 
+struct session_s {
+	uint8_t id[64]; // session_id <- cookie data
+	uint32_t user_id;
+};
+typedef struct session_s session_t;
+
+session_t session; // tmp
 
 // global state - plz make threaded...
 context_t ctx;
@@ -683,8 +691,9 @@ void handle_client(int socket) {
 		size_t json_len = strlen(json_data);
 
 		// http_send(socket, 200, "OK", "application/json", (uint8_t*)json_data, json_len);
-		char * user_cookie = "uauth=admin123";
-		http_send_wcookie(socket, 200, user_cookie, "application/json", (uint8_t*)json_data, json_len);
+		char * cookie = "session_id=admin123";
+
+		http_send_wcookie(socket, 200, cookie, "application/json", (uint8_t*)json_data, json_len);
 		close(socket);
 		return;
 	}
@@ -784,6 +793,27 @@ ROOT_DIR + "/img/*.svg"
 
 int main(int argc, char ** argv) {
 
+	// sha256 test
+	if(1) {
+		char * sha_input = "hello world";
+		size_t sha_input_len = strlen(sha_input);
+
+		uint8_t hash[32] = { 0 };
+		SHA256_CTX sha_ctx;
+
+		sha256_init(&sha_ctx);
+		sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
+		sha256_final(&sha_ctx, hash);
+
+		printf("sha256 of \"%s\" = ", sha_input);
+		for(int i = 0; i < 32; i++) {
+			printf("%02x", hash[i]);
+		}
+		printf("\n\n");
+
+		// "hello world" -> "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+	}
+
 	// parse arguments
 	// TODO: handle opts corectly!!
 	if(argc < 2) {
@@ -826,6 +856,8 @@ int main(int argc, char ** argv) {
 
 	memset(&ctx, 0, sizeof(context_t));
 	ctx.client_len = sizeof(ctx.client_addr);
+
+	memset(&session, 0, sizeof(session_t)); // tmp
 
 	signal(SIGINT, sig_handler);
 

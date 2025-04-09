@@ -17,4 +17,4 @@ INC_FILES=""
 # hashmap - 4x num of elements (pref pow2), not bucketed, large buffer only
 
 gcc src/watchdog.c -o watchdog
-gcc src/http.c src/favicon.c -o http -DPORT=8082 -lpthread -lc
+gcc src/http.c src/favicon.c src/sha256.c -o http -DPORT=8082 -lpthread -lc
