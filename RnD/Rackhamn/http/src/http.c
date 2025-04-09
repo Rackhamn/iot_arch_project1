@@ -205,6 +205,12 @@ pid_t gettid(void) {
 	return syscall(SYS_gettid);
 }
 
+// thread local specific data
+// if hash is to be used outside of a given thread
+// then the data needs to be copied over to a global array / other thread data
+__thread SHA256_CTX thread_sha256_ctx;
+__thread uint8_t thread_hash[32];
+
 int task_queue[MAX_QUEUE];
 int task_front = 0;
 int task_rear = 0;
@@ -265,6 +271,16 @@ int task_dequeue() {
 
 void * worker(void * arg) {
 	pid_t tid = gettid();
+
+	sha256_init(&thread_sha256_ctx);
+	memset(thread_hash, 0, sizeof(thread_hash[0]) * 32);
+
+	/*
+	sha256_init(&sha_ctx);
+	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
+	sha256_final(&sha_ctx, hash);
+	*/
+
 	printf("Thread Worker Start: %i\n", tid);
 	while(1) {
 		int client = task_dequeue();
