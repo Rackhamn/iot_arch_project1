@@ -528,8 +528,8 @@ void http_send_500(int socket) {
 }
 
 // remove response plz - get from code
-void http_send(int socket, int code, char * response, char * mime_type, uint8_t * data, size_t data_size) {
-	dprintf(socket, "HTTP/1.1 %d %s\r\n", code, response);
+void http_send(int socket, int status_code, char * mime_type, uint8_t * data, size_t data_size) {
+	dprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
 	dprintf(socket, "Content-Type: %s\r\n", mime_type);
 	dprintf(socket, "Content-Length: %zu\r\n", data_size);
 	dprintf(socket, "\r\n");
@@ -575,7 +575,7 @@ void load_and_send_file(int socket, char * mime_type, char * path) {
 		return;
 	}
 
-	http_send(socket, 200, "OK", mime_type, NULL, st.st_size);
+	http_send(socket, 200, mime_type, NULL, st.st_size);
 
 	char buffer[1024];
 	ssize_t n;
@@ -641,7 +641,7 @@ void handle_client(int socket) {
 	// use strncmp or a known cmp
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
-		http_send(socket, 200, "OK", "image/x-ixon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
+		http_send(socket, 200, "image/x-ixon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
 		printf("FAVICON SENT!\n");
 		close(socket);
 		return;
@@ -650,7 +650,7 @@ void handle_client(int socket) {
 #if 1
 	if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
 		// send from ram :)
-		http_send(socket, 200, "OK", "image/jpeg", (uint8_t*)cat_large_img_data, cat_large_img_data_size);
+		http_send(socket, 200, "image/jpeg", (uint8_t*)cat_large_img_data, cat_large_img_data_size);
                 printf("CAT RAM SENT!\n");
                 close(socket);
 
