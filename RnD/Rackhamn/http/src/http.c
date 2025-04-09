@@ -208,6 +208,7 @@ pid_t gettid(void) {
 // thread local specific data
 // if hash is to be used outside of a given thread
 // then the data needs to be copied over to a global array / other thread data
+// TODO: make struct thread_ctx plz
 __thread pid_t thread_id;
 __thread SHA256_CTX thread_sha256_ctx;
 __thread uint8_t thread_hash[32];
@@ -302,6 +303,7 @@ void * worker(void * arg) {
 }
 #endif
 
+// are we using this?
 char * get_http_method_string(int http_method) {
 	char * string = NULL;
 	switch(http_method) {
@@ -525,7 +527,24 @@ void sig_handler(int sig) {
 	}
 }
 
+// cookie data = [0-9a-fA-F] only
+/*
+int parse_cookie(char * request, size_t request_size, 
+		char * name, char * data, size_t * data_size) {
+	1. find "Cookie:"
+	2. find name
+	3. skip whitespace
 
+	size_t parsed_len = 0;
+	4. parse above chars until CRLF or ';' or whitespace or '\0'
+	5. write back buffer into data
+	// memcpy?
+	6. write back size of data
+	*data_size = parsed_len;
+
+	return 1;
+ }
+*/
 
 /* Internal Routing
 ROOT_DIR = "./www"
