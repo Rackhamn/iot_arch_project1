@@ -3,16 +3,18 @@
 #include <string.h>
 #include <signal.h>
 // #define _GNU_SOURCE
+#include <errno.h>
 #include <unistd.h> // gettid()
 #include <pthread.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <stdarg.h>
 
 #include "../../arena/arena.h"
 
@@ -20,6 +22,14 @@
 #include "http.h"
 
 #include "favicon.h"
+
+
+int is_valid_fd(int fd) {
+	return  (fcntl(fd, F_GETFL) != -1) ||
+		(errno != EBADF);
+}
+
+
 
 // TODO:
 // 	add CLI interface 
@@ -76,13 +86,14 @@ char * cat_large_img_data = NULL;
 char * cat_large_img_path = NULL;
 size_t cat_large_img_data_size = 0;
 
-struct session_s {
-	uint8_t id[64]; // session_id <- cookie data
-	uint32_t user_id;
-};
-typedef struct session_s session_t;
-
+#if 0
 session_t session; // tmp
+
+// TODO: needs a shared mutex for the threads!
+#define MAX_SESSIONS	128
+#define SESSION_HT_SIZE	(MAX_SESSIONS * 4)
+session_t session_ht[SESSION_HT_SIZE];
+#endif 
 
 // global state - plz make threaded...
 context_t ctx;
@@ -213,6 +224,11 @@ __thread pid_t thread_id;
 __thread SHA256_CTX thread_sha256_ctx;
 __thread uint8_t thread_hash[32];
 
+__thread char * thread_request_buffer;
+__thread size_t thread_request_buffer_size;
+__thread char * thread_response_buffer;
+__thread size_t thread_response_buffer_size;
+
 int task_queue[MAX_QUEUE];
 int task_front = 0;
 int task_rear = 0;
@@ -277,6 +293,22 @@ void * worker(void * arg) {
 	sha256_init(&thread_sha256_ctx);
 	memset(thread_hash, 0, sizeof(thread_hash[0]) * 32);
 
+	thread_request_buffer_size = sizeof(char) * 8192;
+	thread_request_buffer = malloc(thread_request_buffer_size);
+	if(thread_request_buffer == NULL) {
+		printf("thread %i could not allocate request buffer!\n", thread_id);
+		return NULL;
+	}
+	memset(thread_request_buffer, 0, thread_request_buffer_size);
+
+	thread_response_buffer_size = sizeof(char) * 8192;
+	thread_response_buffer = malloc(thread_response_buffer_size);
+	if(thread_response_buffer == NULL) {
+		printf("thread %i could not allocate response buffer!\n", thread_id);
+		return NULL;
+	}
+	memset(thread_response_buffer, 0, thread_response_buffer_size);
+
 	/*
 	sha256_init(&sha_ctx);
 	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
@@ -292,6 +324,18 @@ void * worker(void * arg) {
 		}
 
 		handle_client(client);		
+	}
+
+	if(thread_request_buffer != NULL) {
+		free(thread_request_buffer);
+		thread_request_buffer = NULL;
+		thread_request_buffer_size = 0;
+	}
+
+	if(thread_response_buffer != NULL) {
+		free(thread_response_buffer);
+		thread_response_buffer = NULL;
+		thread_response_buffer_size = 0;
 	}
 
 #if 0
@@ -559,44 +603,69 @@ ROOT_DIR + "/img/*.svg"
 // TODO: move into code indexed mapped table
 #define STRLEN(s) (sizeof(s) - 1)
 
+/*
+ * note: we dont use dprintf or write since they can end up causing a PIPE error.
+ * we dont want that, so well just use send() with MSG_NOSIGNAL instead.
+ * - test: hold F5 (refresh) in the browser window to quick reload many multiple times.
+*/
+
+// lets try a custom dprintf using send instead
+int hprintf(int socket, const char * fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	int len = vsnprintf(thread_response_buffer, thread_response_buffer_size - 1, fmt, args);
+	va_end(args);
+
+	if(len < 0) {
+		return -1;
+	}
+
+	if((size_t)len > thread_response_buffer_size - 1) {
+		len = thread_response_buffer_size - 1;
+	}
+
+	int sent = send(socket, thread_response_buffer, len, MSG_NOSIGNAL);
+	return sent;
+}
+
 void http_send_401(int socket) {
-	dprintf(socket, "HTTP/1.1 401 Bad Request\r\n\r\n");
+	hprintf(socket, "HTTP/1.1 401 Bad Request\r\n\r\n");
 }
 
 void http_send_404(int socket) {
-	dprintf(socket, "HTTP/1.1 404 File Not Found\r\n\r\n");
+	hprintf(socket, "HTTP/1.1 404 File Not Found\r\n\r\n");
 }
 
 void http_send_500(int socket) {
-	dprintf(socket, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+	hprintf(socket, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
 }
 
 // remove response plz - get from code
 void http_send(int socket, int status_code, char * mime_type, uint8_t * data, size_t data_size) {
-	dprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
-	dprintf(socket, "Content-Type: %s\r\n", mime_type);
-	dprintf(socket, "Content-Length: %zu\r\n", data_size);
-	dprintf(socket, "\r\n");
-
+	hprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
+	hprintf(socket, "Content-Type: %s\r\n", mime_type);
+	hprintf(socket, "Content-Length: %zu\r\n", data_size);
+	hprintf(socket, "\r\n");
+	
 	if(data != NULL) {
-		write(socket, data, data_size);
+		send(socket, data, data_size, MSG_NOSIGNAL);
 	}
 }
 
 void http_send_wcookie(int socket, int status_code, char * cookie_str, char * mime_type, uint8_t * data, size_t data_size) {
-	dprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
-	dprintf(socket, "Content-Type: %s\r\n", mime_type);
-	dprintf(socket, "Content-Length: %zu\r\n", data_size);
+	hprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
+	hprintf(socket, "Content-Type: %s\r\n", mime_type);
+	hprintf(socket, "Content-Length: %zu\r\n", data_size);
 
 	if(cookie_str != NULL) {
-		dprintf(socket, "Set-Cookie: %s\r\n", cookie_str);
-		dprintf(socket, "Path=/; HttpOnly; SameSite=Strict; Secure;\r\n");
+		hprintf(socket, "Set-Cookie: %s\r\n", cookie_str);
+		hprintf(socket, "Path=/; HttpOnly; SameSite=Strict; Secure;\r\n");
 	}
 
-	dprintf(socket, "\r\n");
+	hprintf(socket, "\r\n");
 
 	if(data != NULL) {
-		write(socket, data, data_size);
+		send(socket, data, data_size, MSG_NOSIGNAL);
 	}
 }
 
@@ -624,7 +693,8 @@ void load_and_send_file(int socket, char * mime_type, char * path) {
 	char buffer[1024];
 	ssize_t n;
 	while((n = read(fd, buffer, sizeof(buffer))) > 0) {
-		write(socket, buffer, n);
+		// write(socket, buffer, n);
+		send(socket, buffer, n, MSG_NOSIGNAL);
 	}
 
 	close(fd);
@@ -644,15 +714,45 @@ char * get_ext(char * str) {
 	return final_period;	
 }
 
+
+struct http_request_s {
+	// data ptr
+	char * data;
+	int base_offset;
+};
+
+void handle_api_request(int socket, char * buffer) {
+	char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
+	size_t json_len = strlen(json_data);
+
+	// http_send(socket, 200, "OK", "application/json", (uint8_t*)json_data, json_len);
+	char * cookie = "session_id=admin123";
+
+	http_send_wcookie(socket, 200, cookie, "application/json", (uint8_t*)json_data, json_len);
+	
+	close(socket);
+
+	return;
+}
+
+// todo: rename handle_request();
 void handle_client(int socket) {
+	// todo: assert before entering the handle_client call
 	if(socket <= 0) {
 		printf("client socket error!\n");
 		return;
 	}
+	// todo: move into static memory per thread
+	// 	like 8MB or something
+	// 	plus one for the output
 	// maybe this size has to be bigger?
 	// or in an incrementing buffer?
-	char buffer[BUFFER_SIZE] = { 0 };
-	int bytes_read = read(socket, buffer, sizeof(buffer) - 1);
+	// char buffer[BUFFER_SIZE] = { 0 };
+	size_t buffer_size = thread_request_buffer_size;
+	char * buffer = thread_request_buffer;
+	memset(thread_request_buffer, 0, thread_request_buffer_size);
+	
+	int bytes_read = read(socket, buffer, buffer_size - 1);//sizeof(buffer) - 1);
 	if(bytes_read < 0) {
 		printf("client read error\n");
 		close(socket);
@@ -667,10 +767,12 @@ void handle_client(int socket) {
 	printf(" ### CLIENT REQUEST : END ###\n");
 #endif
 
-	char method[16];
-	char path[512];
-	char version[16];
-	char file_path[1024];
+	// do before handle_request and handle_api_request
+	// expose to next function.
+	char method[16] = { 0 };
+	char path[512] = { 0 };
+	char version[16] = { 0 };
+	char file_path[1024] = { 0 };
 
 	// not safe - plz do an actual parse
 	// use known cmp for method
@@ -692,7 +794,13 @@ void handle_client(int socket) {
 	}
 
 #if 1
-	if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
+	// valgrind complains if we dont copy the data over first
+	// says uninitialied value
+	char catpath[512] = { 0 };
+	memcpy(catpath, cat_large_img_path, strlen(cat_large_img_path));
+
+	// if(strcmp(method, "GET") == 0 && strcmp(path, cat_large_img_path) == 0) {
+	if(strcmp(method, "GET") == 0 && strcmp(path, catpath) == 0) {
 		// send from ram :)
 		http_send(socket, 200, "image/jpeg", (uint8_t*)cat_large_img_data, cat_large_img_data_size);
                 printf("CAT RAM SENT!\n");
@@ -719,10 +827,13 @@ void handle_client(int socket) {
 // 
 // maybe we can put in async io (posic aio.h) for stream reading files
 
+	// todo: make a testing platform for the api stuff
+	// 	build the http requests and test all apis
 	// routing plz
 	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
 		printf("API CALL\n");
 		// API CALL maybe
+		// todo: build with json library
 		char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
 		size_t json_len = strlen(json_data);
 
@@ -893,7 +1004,7 @@ int main(int argc, char ** argv) {
 	memset(&ctx, 0, sizeof(context_t));
 	ctx.client_len = sizeof(ctx.client_addr);
 
-	memset(&session, 0, sizeof(session_t)); // tmp
+	// memset(&session, 0, sizeof(session_t)); // tmp
 
 	signal(SIGINT, sig_handler);
 
