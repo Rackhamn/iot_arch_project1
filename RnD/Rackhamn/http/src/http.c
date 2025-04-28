@@ -323,7 +323,7 @@ void * worker(void * arg) {
 			break;
 		}
 
-		handle_client(client);		
+		handle_request(client);		
 	}
 
 	if(thread_request_buffer != NULL) {
@@ -613,15 +613,16 @@ ROOT_DIR + "/img/*.svg"
 int hprintf(int socket, const char * fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
-	int len = vsnprintf(thread_response_buffer, thread_response_buffer_size - 1, fmt, args);
+	int len = vsnprintf(thread_response_buffer, thread_response_buffer_size, fmt, args);
 	va_end(args);
 
 	if(len < 0) {
 		return -1;
 	}
 
-	if((size_t)len > thread_response_buffer_size - 1) {
-		len = thread_response_buffer_size - 1;
+	// shouldnt happen
+	if((size_t)len > thread_response_buffer_size) {
+		len = thread_response_buffer_size;
 	}
 
 	int sent = send(socket, thread_response_buffer, len, MSG_NOSIGNAL);
@@ -689,7 +690,8 @@ void load_and_send_file(int socket, char * mime_type, char * path) {
 	}
 
 	http_send(socket, 200, mime_type, NULL, st.st_size);
-
+	
+	// todo: use thread_buffer
 	char buffer[1024];
 	ssize_t n;
 	while((n = read(fd, buffer, sizeof(buffer))) > 0) {
@@ -714,7 +716,7 @@ char * get_ext(char * str) {
 	return final_period;	
 }
 
-
+// todo: write this out pls
 struct http_request_s {
 	// data ptr
 	char * data;
@@ -735,8 +737,7 @@ void handle_api_request(int socket, char * buffer) {
 	return;
 }
 
-// todo: rename handle_request();
-void handle_client(int socket) {
+void handle_request(int socket) {
 	// todo: assert before entering the handle_client call
 	if(socket <= 0) {
 		printf("client socket error!\n");
@@ -787,7 +788,7 @@ void handle_client(int socket) {
 	// use strncmp or a known cmp
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
-		http_send(socket, 200, "image/x-ixon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
+		http_send(socket, 200, "image/x-icon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
 		printf("FAVICON SENT!\n");
 		close(socket);
 		return;
@@ -971,7 +972,9 @@ int main(int argc, char ** argv) {
 	}
 
 
-
+	// why do we load only this here
+	// and why not store it into ram cache
+	// as we call load_file
 	{
 	cat_large_img_data = malloc(1024 + (1 * 1000 * 1000)); // 1MB why not
 	cat_large_img_path = cat_large_img_data;

@@ -49,7 +49,7 @@ char * get_http_method_string(int http_method);
 size_t get_http_method_string_size(int http_method);
 char * get_mime_type(char * ext);
 
-void handle_client(int socket); 
+void handle_request(int socket); 
 
 int run_server();
 
