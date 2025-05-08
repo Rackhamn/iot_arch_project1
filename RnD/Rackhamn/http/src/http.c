@@ -671,17 +671,31 @@ void http_send_wcookie(int socket, int status_code, char * cookie_str, char * mi
 }
 
 // dont like this function
+// hash cache or tree?
 // send_static_file(socket, path)
 // 	if in ram, mime is known and data is too - hashtable by path
 //	if on disk, load file into memory then send
 void load_and_send_file(int socket, char * mime_type, char * path) {
+/*
+	unsigned int index = -1;
+	if((index = cache_has(path)) >= 0) {
+		cache_index_send(socket, index);
+		return;
+	}
+*/
 	int fd = open(path, O_RDONLY);
 	if(fd < 0) {
 		// if mime_type == html -> send page_404.html instead ;)
 		http_send_404(socket);
 		return;
 	}
-
+/*
+	if((index = cache_load(path)) >= 0) {
+		cache_index_send(socket, index);
+		return;
+	}
+*/
+	// move to cache_load_file()
 	struct stat st;
 	if(fstat(fd, &st) == -1) {
 		close(fd);
@@ -762,7 +776,7 @@ void handle_request(int socket) {
 	buffer[bytes_read] = '\0';
 
 #if 1
-	// dump request
+	// dump request - use verbose flags!
 	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
 	printf("%s\n", buffer);
 	printf(" ### CLIENT REQUEST : END ###\n");
@@ -785,7 +799,18 @@ void handle_request(int socket) {
 	printf("path: %s\n", path);
 	printf("version: %s\n", version);
 
-	// use strncmp or a known cmp
+
+
+	// state
+	int is_api_request_ = (strcmp(path, "/api", 4) == 0); // use strncmp or a known cmp
+	int method_ = get_method(method_str);
+	
+	if(is_api_request_ == 1) {
+		// call api handler with method
+	}
+
+
+
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
 		http_send(socket, 200, "image/x-icon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
@@ -831,6 +856,10 @@ void handle_request(int socket) {
 	// todo: make a testing platform for the api stuff
 	// 	build the http requests and test all apis
 	// routing plz
+	if(strcmp(path, "/api" 4) == 0) {
+		handle_api_request();
+	}
+
 	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
 		printf("API CALL\n");
 		// API CALL maybe
