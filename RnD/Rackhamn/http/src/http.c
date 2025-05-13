@@ -16,7 +16,15 @@
 #include <sys/syscall.h>
 #include <stdarg.h>
 
+// ARENA
 #include "../../arena/arena.h"
+
+// JSON
+#include "../../json/src/json_cpac.h"
+#include "../../json/src/json_dump.h"
+#include "../../json/src/json_find.h"
+#include "../../json/src/json_make.h"
+#include "../../json/src/json_write.h"
 
 #include "sha256.h"
 #include "http.h"
@@ -75,7 +83,7 @@ typedef struct file_cache_entry_s fc_entry_t;
 
 #define MAX_FILE_CACHE_SIZE	16
 struct file_cache_s {
-	arena_t * arena;
+	// arena_t * arena;
 	uint32_t num_files;
 	fc_entry_t files[MAX_FILE_CACHE_SIZE];
 };
@@ -237,7 +245,10 @@ int task_count = 0;
 volatile sig_atomic_t running = 1;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
-pthread_barrier_t barrier;
+// pthread_barrier_t barrier;
+
+pthread_mutex_t login_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t login_cond = PTHREAD_COND_INITIALIZER;
 
 void task_enqueue(int client) {
 	// printf("enqueue\n");
@@ -629,6 +640,10 @@ int hprintf(int socket, const char * fmt, ...) {
 	return sent;
 }
 
+void http_send_200(int socket) {
+	hprintf(socket, "HTTP/1.1 200 OK\r\n\r\n");
+}
+
 void http_send_401(int socket) {
 	hprintf(socket, "HTTP/1.1 401 Bad Request\r\n\r\n");
 }
@@ -737,7 +752,398 @@ struct http_request_s {
 	int base_offset;
 };
 
-void handle_api_request(int socket, char * buffer) {
+
+
+
+
+
+
+
+// from DB
+struct user_s {
+	char username[64];
+	char password_hash[128];
+};
+typedef struct user_s user_t;
+
+
+// each thread could keep a LRU table of logged in users
+struct login_entry_s {
+	unsigned int hash;
+	time_t created_at; // expiration
+	user_t user;
+	unsigned char token[32]; 
+};
+typedef struct login_entry_s login_entry_t;
+
+struct login_hashtable_s {
+	int capacity;
+	int size;
+	login_entry_t * entry;
+};
+typedef struct login_hashtable_s login_ht_t;
+
+// global
+login_ht_t login_ht;
+
+void init_login_ht() {
+	memset(&login_ht, 0, sizeof(login_ht));
+
+	int max_planned_entries = 16; // lowball
+	login_ht.capacity = max_planned_entries * 4;
+	login_ht.size = 0;
+	login_ht.entry = malloc(sizeof(login_entry_t) * login_ht.capacity);
+
+	if(login_ht.entry == NULL) {
+//		exit(1);
+	}
+}
+
+void free_login_ht() {
+	if(login_ht.entry != NULL) {
+		free(login_ht.entry);
+	}
+	memset(&login_ht, 0, sizeof(login_ht));
+}
+
+// could have just used a linear array and loop...
+// use unsigned long?
+// why do we even use a hash - we should already have sha256 as the fucking hash!
+unsigned long hash_djb2(unsigned char * data, size_t bytes) {
+	unsigned long hash = 5381;
+	int c;
+
+	unsigned int i = 0;
+	while(i < bytes) {
+		c = data[i];
+		hash = ((hash << 5) + hash) + c;
+		i++;
+	}
+	return hash;
+}
+
+// ht[hash % size]; return index;
+int login_ht_insert_hash(login_ht_t * ht, unsigned long hash) {
+	int index = hash & ht->capacity;
+	
+	if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+		ht->entry[index].hash = hash;
+		return index;
+	}
+
+	// find next empty index - incremental search
+	int start = index - 1;
+	int end = ht->capacity - 1;
+	while(index < end) {
+		index++;
+		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+			ht->entry[index].hash = hash;
+			return index;
+		}
+	}
+
+	index = 0;
+	end = start;
+	while(index < end) {
+		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+			ht->entry[index].hash = hash;
+			return index;
+		}
+		index++;
+	}
+	
+	return -1;
+}
+
+// find
+int login_ht_get_hash_index(login_ht_t * ht, unsigned long hash) {
+	int index = hash & ht->capacity;
+	
+	if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+		return index;
+	}
+
+	// find next empty index - incremental search
+	int start = index - 1;
+	int end = ht->capacity - 1;
+	while(index < end) {
+		index++;
+		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+			return index;
+		}
+	}
+
+	index = 0;
+	end = start;
+	while(index < end) {
+		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+			return index;
+		}
+		index++;
+	}
+	
+	return -1;
+}
+
+int login_ht_clear_hash_index(login_ht_t * ht, unsigned long hash) {
+	int index = login_ht_get_hash_index(ht, hash);
+	if(index >= 0) {
+		memset(&ht->entry[index], 0, sizeof(login_entry_t));
+		return 0;
+	}
+
+	return 1; // err
+}
+
+#if 0
+void ht_test() {
+	printf("test login ht\n");
+	
+	init_login_ht();
+
+	printf("insert 'a'\n");
+	char * str_a = "aaaaaa";
+	unsigned long hash_a = hash_djb2(str_a, strlen(str_a));
+	
+	char * str_b = "aaaaab";
+	unsigned long hash_b = hash_djb2(str_b, strlen(str_b));
+
+	printf("hash_a: %8lX - %lu\n", hash_a, hash_a % login_ht.capacity);
+	printf("hash_b: %8lX - %lu\n", hash_b, hash_b % login_ht.capacity);
+
+	int idx_a = login_ht_get_hash_index(&login_ht, hash_a);
+	if(idx_a >= 0) {
+		login_ht.entry[idx_a].hash = hash_a;
+		login_ht.entry[idx_a].ok = 1;
+	}
+
+	free_login_ht();
+}
+#endif
+
+// per thread
+// ...
+
+#if 0
+user_t get_db_user_from_username(char * username) {
+	user_t user = { 0 }; // sqlite3.find_user(username);
+
+	return user;
+}
+
+int is_valid_session(unsigned char token[32]) {
+	unsigned long hash = hash_djb2(token, 32);
+	int idx = login_ht_get_hash_index(&login_ht, hash);
+
+	if(idx < 0) { return 0; }
+
+	if(memcmp(login_ht.entry[idx].token, token, 32) == 0) {
+		return 1;
+	}
+
+	return 0;
+}
+#endif
+
+const int num_users = 3;
+const char * users[3] = {
+	"admin",
+	"cat",
+	"dog"
+};
+
+void handle_login(int socket, char token[32], char * json_data) {
+	user_t tmp_user;
+
+	// move into per thread plz
+	arena_t json_arena;
+	arena_create(&json_arena, 8192);
+
+	printf("# json data:\n%s\n", json_data);
+
+	json_result_t result = json_parse(&json_arena, json_data);
+
+	json_value_t * username_value = json_find_by_path(result.root, "username");
+        if(username_value && username_value->type == JSON_TOKEN_STRING) {
+                printf("username := %s\n", username_value->string.chars);
+        } else {
+                printf("username := NULL\n");
+        }
+
+	json_value_t * password_value = json_find_by_path(result.root, "password");
+        if(password_value && password_value->type == JSON_TOKEN_STRING) {
+                printf("password := %s\n", password_value->string.chars);
+        } else {
+                printf("password := NULL\n");
+        }
+
+	int match_id = -1;
+	for(int i = 0; i < num_users; i++) {
+		if(strncmp(username_value->string.chars, users[i], strlen(users[i])) == 0) {
+			match_id = i;
+			break;
+		}
+	}
+
+	if(match_id == -1) {
+		printf("Login: username was not found!\n");
+		http_send_401(socket);
+		return;
+	}
+
+	// assume that token is 0
+	// generate and insert new one!
+	// then send it over as cookie
+	
+	size_t sha_input_len = 0;
+	char sha_input[128] = { 0 };
+	strcpy(sha_input, username_value->string.chars);
+	sha_input_len = strlen(sha_input);
+
+        SHA256_CTX sha_ctx;
+	sha256_init(&sha_ctx);
+	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
+	sha256_final(&sha_ctx, (uint8_t *)token);
+
+	unsigned long hash = hash_djb2(token, 32);
+	int index = login_ht_insert_hash(&login_ht, hash);
+	if(index >= 0) {
+		login_ht.entry[index].hash = hash;
+		memcpy(login_ht.entry[index].token, token, 32);
+		printf("# login_ht index == %i\n", index);
+	}
+
+	http_send_200(socket);
+#if 0
+	char * username = json_get(json_data, "username");
+	char * password = json_get(json_data, "password");
+
+	user_t user = get_db_user_from_username(username);
+	if(user && verify_pasword(password, user->password_hash)) {
+		char token[32] = generate_session_token(user);
+		store_token(token, user->username);
+	
+		unsigned long hash = hash_djb2(token, 32);
+		int idx = login_ht_insert_hash(&login_ht, hash);
+		if(idx < 0) {
+			respond_xxx(); // internal server error
+			return;
+		}
+
+		login_ht.entry[idx].hash = hash;
+		memcpy(login_ht.entry[idx].user, user, sizeof(user));
+		memcpy(login_ht.entry[idx].token, token, 32);
+
+		// wcookie sessionId=%s, token
+		respond_200();
+	} else {
+		respond_401();
+	}
+#endif
+
+	arena_destroy(&json_arena);
+}
+
+
+
+int extract_sessionid_token(char * buffer, char * token) {
+	char * cookie_header = strstr(buffer, "Cookie:");
+	if(cookie_header == NULL) return 0;
+
+	cookie_header += strlen("Cookie:");
+
+	char * session_start = strstr(cookie_header, "sessionID=");
+	if(session_start == NULL) return 0;
+
+	session_start += strlen("sessionID=");
+
+	// get the token
+	char * session_end = strpbrk(session_start, "; \r\n");
+	size_t len = session_end ? (size_t)(session_end - session_start) : strlen(session_start);
+	if(len == 0) {
+		return 0;
+	}
+
+	if(len > 32) {
+		len = 32;
+	}
+
+	for(int i = 0; i < len; i++) {
+		token[i] = session_start[i];
+	}
+
+	return 1;
+}
+
+// thread_response_buffer, thread_request_buffer
+void handle_api_request(int socket, char * req_path, char * buffer, char * json_in_data) {
+	// should already have been done!!!!
+	// figure out which action/ route to take
+	int method = 0;
+	int api_version = 0;
+
+	char * in_buf = thread_request_buffer;
+	char * out_buf = thread_response_buffer;
+
+	if(json_in_data == NULL) {
+		http_send_401(socket);
+		return;
+	}
+
+	int has_cookie = 0;
+	unsigned char token[32] = { 0 };
+
+	// grab the sessionID data from the request buffer - not safe
+	// cookie = "sessionID="
+	//
+	has_cookie = extract_sessionid_token(buffer, token);
+	if(has_cookie) {
+		printf("Token: ");
+		for(int i = 0; i < 32; i++) {
+			printf("%x", token[i]);
+		}
+		printf("\n");
+	}
+
+	if(strncmp(req_path, "/api/v1/login", 13) == 0) {
+		printf("API V1 LOGIN\n");
+		handle_login(socket, token, json_in_data);
+		return;
+	}
+
+	// check if logged in
+
+#if 0
+	if (request == "api/v1/login") {
+		user = { 0 }; // sqlite.get_user_on_match(username, hashsalt(password));
+		if(user.valid) {
+			generate sha256 token
+			login_ht_insert(user, token);
+			respond 200 ok + sessionID cookie (token)
+		} else {
+			respond 401 unauth
+		}
+	}
+	else if(have_sessionID_cookie) {
+		// other requests
+		hash = hash_djb2(token);
+		idx = login_ht_get_index(hash);
+		if(login_ht.entry[idx].token != token) {
+			respond 401 unauth
+		}
+
+		// if(!is_valid_session(token)) {
+		//	respond_401(socket);
+		//	close(socket);
+		// }
+
+		// handle request json
+	}
+	#endif
+
+
+	printf("HELP\n");
+
 	char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
 	size_t json_len = strlen(json_data);
 
@@ -751,6 +1157,7 @@ void handle_api_request(int socket, char * buffer) {
 	return;
 }
 
+// file request - standard OK for all
 void handle_request(int socket) {
 	// todo: assert before entering the handle_client call
 	if(socket <= 0) {
@@ -799,17 +1206,37 @@ void handle_request(int socket) {
 	printf("path: %s\n", path);
 	printf("version: %s\n", version);
 
-
-
-	// state
-	int is_api_request_ = (strcmp(path, "/api", 4) == 0); // use strncmp or a known cmp
-	int method_ = get_method(method_str);
 	
-	if(is_api_request_ == 1) {
+	// state
+	int is_api_request_ = (strncmp(path, "/api", 4) == 0); // use strncmp or a known cmp
+	
+	if(is_api_request_) {
+	//int method_ = get_method(method_str);
+		size_t content_length = 0;
+
+		char * p = buffer;
+		char * content_length_header = strstr(p, "Content-Length:");
+		p = content_length_header + strlen("Content-Length:");
+	
+		int len = atoi(p);
+		printf("# Content-Length: %i\n", len);
+		if(len > 0) {
+			content_length = len;
+		}
+
+		if(len == 0) {
+			// something is probably wrong?
+			http_send_401(socket);
+			close(socket);
+			return;
+		}
+
 		// call api handler with method
+		char * eorp = (buffer + bytes_read) - content_length;
+		handle_api_request(socket, path, buffer, eorp);
+		close(socket);
+		return;
 	}
-
-
 
 	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
@@ -856,10 +1283,11 @@ void handle_request(int socket) {
 	// todo: make a testing platform for the api stuff
 	// 	build the http requests and test all apis
 	// routing plz
-	if(strcmp(path, "/api" 4) == 0) {
-		handle_api_request();
-	}
+	// if(strncmp(path, "/api", 4) == 0) {
+	//	handle_api_request();
+	// }
 
+#if 0
 	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
 		printf("API CALL\n");
 		// API CALL maybe
@@ -874,7 +1302,8 @@ void handle_request(int socket) {
 		close(socket);
 		return;
 	}
-	
+#endif
+
 	char * ext = NULL;
 	ext = get_ext(path);
 	if(ext == NULL) {
@@ -969,6 +1398,11 @@ ROOT_DIR + "/img/*.svg"
 }
 
 int main(int argc, char ** argv) {
+
+//	ht_test();
+//	return 0;
+
+	init_login_ht();
 
 	// sha256 test
 	if(1) {
@@ -1175,6 +1609,7 @@ int main(int argc, char ** argv) {
 		(void)pthread_join(threads[i], NULL);
 	}
 	
+	free_login_ht();
 
 	printf("close server socket\n");
 	close(ctx.server_socket);
