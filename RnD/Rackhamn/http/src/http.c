@@ -222,7 +222,7 @@ void hex_encode(char * out, unsigned char * in, size_t len) {
 	const char hex[] = "0123456789ABCDEF";
 	for(size_t i = 0; i < len; i++) {
 		out[i*2] = hex[(in[i] >> 4) & 0xF];
-		out[i*2+1] = hex[int[i] & 0xF];
+		out[i*2+1] = hex[in[i] & 0xF];
 	}
 	out[len * 2] = '\0';
 }
@@ -237,8 +237,8 @@ int hex_decode(unsigned char * out, char * hex) {
 		char c1, c2;
 		unsigned char hi, lo;
 
-		c1 = in[i];
-		c2 = in[i + 1];
+		c1 = hex[i];
+		c2 = hex[i + 1];
 
 		hi = hex2u8(c1);
 		lo = hex2u8(c2);		
