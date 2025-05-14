@@ -214,7 +214,51 @@ const unsigned char favicon_icox[] = {
     0x00,0x00,0x00,0x00
 };
 
+#ifndef HEX_CODEC_H
+#define HEX_CODEC_H
 
+#include <ctype.h>
+void hex_encode(char * out, unsigned char * in, size_t len) {
+	const char hex[] = "0123456789ABCDEF";
+	for(size_t i = 0; i < len; i++) {
+		out[i*2] = hex[(in[i] >> 4) & 0xF];
+		out[i*2+1] = hex[int[i] & 0xF];
+	}
+	out[len * 2] = '\0';
+}
+
+#define hex2u8(x) \
+	((isdigit(x)) ? x - '0' : \
+	(isxdigit(x)) ? (tolower(x) - 'a' + 10) : 255)
+
+int hex_decode(unsigned char * out, char * hex) {
+	size_t i = 0;
+	while(hex[i] && hex[i + 1]) {
+		char c1, c2;
+		unsigned char hi, lo;
+
+		c1 = in[i];
+		c2 = in[i + 1];
+
+		hi = hex2u8(c1);
+		lo = hex2u8(c2);		
+		
+		if(hi > 15 || lo > 15) {
+			return -1;
+		}	
+
+		out[i / 2] = (hi << 4) | lo;
+		i += 2;
+	}
+
+	// turns out that the string is of odd length
+	if(in[i]) {
+		return -1;
+	}
+
+	return (int)(i / 2);
+}
+#endif
 
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
@@ -670,8 +714,10 @@ void http_send(int socket, int status_code, char * mime_type, uint8_t * data, si
 
 void http_send_wcookie(int socket, int status_code, char * cookie_str, char * mime_type, uint8_t * data, size_t data_size) {
 	hprintf(socket, "HTTP/1.1 %d %s\r\n", status_code, get_status_code_str(status_code));
-	hprintf(socket, "Content-Type: %s\r\n", mime_type);
-	hprintf(socket, "Content-Length: %zu\r\n", data_size);
+	if(mime_type != NULL)
+		hprintf(socket, "Content-Type: %s\r\n", mime_type);
+	if(data != NULL && data_size != 0)
+		hprintf(socket, "Content-Length: %zu\r\n", data_size);
 
 	if(cookie_str != NULL) {
 		hprintf(socket, "Set-Cookie: %s\r\n", cookie_str);
@@ -769,7 +815,7 @@ typedef struct user_s user_t;
 
 // each thread could keep a LRU table of logged in users
 struct login_entry_s {
-	unsigned int hash;
+	unsigned long hash;
 	time_t created_at; // expiration
 	user_t user;
 	unsigned char token[32]; 
@@ -824,7 +870,7 @@ unsigned long hash_djb2(unsigned char * data, size_t bytes) {
 
 // ht[hash % size]; return index;
 int login_ht_insert_hash(login_ht_t * ht, unsigned long hash) {
-	int index = hash & ht->capacity;
+	int index = hash % ht->capacity;
 	
 	if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
 		ht->entry[index].hash = hash;
@@ -832,8 +878,8 @@ int login_ht_insert_hash(login_ht_t * ht, unsigned long hash) {
 	}
 
 	// find next empty index - incremental search
-	int start = index - 1;
-	int end = ht->capacity - 1;
+	int start = index;
+	int end = ht->capacity;
 	while(index < end) {
 		index++;
 		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
@@ -857,18 +903,18 @@ int login_ht_insert_hash(login_ht_t * ht, unsigned long hash) {
 
 // find
 int login_ht_get_hash_index(login_ht_t * ht, unsigned long hash) {
-	int index = hash & ht->capacity;
+	int index = hash % ht->capacity;
 	
-	if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+	if(ht->entry[index].hash == hash) {
 		return index;
 	}
 
 	// find next empty index - incremental search
-	int start = index - 1;
-	int end = ht->capacity - 1;
+	int start = index;
+	int end = ht->capacity;
 	while(index < end) {
 		index++;
-		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+		if(ht->entry[index].hash == hash) {
 			return index;
 		}
 	}
@@ -876,7 +922,7 @@ int login_ht_get_hash_index(login_ht_t * ht, unsigned long hash) {
 	index = 0;
 	end = start;
 	while(index < end) {
-		if(ht->entry[index].hash == 0 || ht->entry[index].hash == hash) {
+		if(ht->entry[index].hash == hash) {
 			return index;
 		}
 		index++;
@@ -977,43 +1023,71 @@ void handle_login(int socket, char token[32], char * json_data) {
                 printf("password := NULL\n");
         }
 
+#if 1
+	// TODO: replace with actual user matching on sqlite3
 	int match_id = -1;
+	int username_value_len = strlen(username_value->string.chars);
 	for(int i = 0; i < num_users; i++) {
-		if(strncmp(username_value->string.chars, users[i], strlen(users[i])) == 0) {
-			match_id = i;
-			break;
+		// issue: strncmp okeys "dogcat" for "dog" ...
+		// those are not the same things!!!
+		int len = strlen(users[i]);
+		if(username_value_len == len) {
+			if(strncmp(username_value->string.chars, users[i], len) == 0) {
+				printf("matched string: %s\n", users[i]);
+				match_id = i;
+				break;
+			}
 		}
 	}
 
 	if(match_id == -1) {
 		printf("Login: username was not found!\n");
+		// TODO: on fail, send back json data too
 		http_send_401(socket);
 		return;
 	}
-
+#endif
 	// assume that token is 0
 	// generate and insert new one!
 	// then send it over as cookie
 	
 	size_t sha_input_len = 0;
 	char sha_input[128] = { 0 };
-	strcpy(sha_input, username_value->string.chars);
+	memcpy(sha_input, username_value->string.chars, strlen(username_value->string.chars));
 	sha_input_len = strlen(sha_input);
 
+	// TODO: use thread local version
         SHA256_CTX sha_ctx;
 	sha256_init(&sha_ctx);
 	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
 	sha256_final(&sha_ctx, (uint8_t *)token);
 
 	unsigned long hash = hash_djb2(token, 32);
-	int index = login_ht_insert_hash(&login_ht, hash);
+	printf("# hash = %08lX\n", hash);
+	int index = login_ht_get_hash_index(&login_ht, hash);
+	if(index == -1) {
+		printf("hash not in hashtable\n");
+		index = login_ht_insert_hash(&login_ht, hash);
+		printf("try %i\n", index);
+	}
+
 	if(index >= 0) {
 		login_ht.entry[index].hash = hash;
 		memcpy(login_ht.entry[index].token, token, 32);
 		printf("# login_ht index == %i\n", index);
 	}
 
-	http_send_200(socket);
+
+	char cookie[64] = "sessionID=";
+
+	char token_hex[32];
+	hex_encode(token_hex, token, 32);
+
+	memcpy(cookie + 10, token, 32);
+	cookie[42] = '\0';
+	http_send_wcookie(socket, 200, cookie, NULL, NULL, 0);
+
+//	http_send_200(socket);
 #if 0
 	char * username = json_get(json_data, "username");
 	char * password = json_get(json_data, "password");
@@ -1058,7 +1132,12 @@ int extract_sessionid_token(char * buffer, char * token) {
 	session_start += strlen("sessionID=");
 
 	// get the token
+	// wont work for non-; ended strings --- fuck
 	char * session_end = strpbrk(session_start, "; \r\n");
+	if(session_end == NULL) {
+		session_end = strpbrk(session_start, "\r\n"); // second attempt
+	}
+
 	size_t len = session_end ? (size_t)(session_end - session_start) : strlen(session_start);
 	if(len == 0) {
 		return 0;
