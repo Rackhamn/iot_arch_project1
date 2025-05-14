@@ -231,9 +231,11 @@ void hex_encode(char * out, unsigned char * in, size_t len) {
 	((isdigit(x)) ? x - '0' : \
 	(isxdigit(x)) ? (tolower(x) - 'a' + 10) : 255)
 
-int hex_decode(unsigned char * out, char * hex) {
+int hex_decode(unsigned char * out, size_t out_len, char * hex) {
 	size_t i = 0;
-	while(hex[i] && hex[i + 1]) {
+
+	size_t len = out_len * 2;
+	while(i < len) {
 		char c1, c2;
 		unsigned char hi, lo;
 
@@ -251,10 +253,12 @@ int hex_decode(unsigned char * out, char * hex) {
 		i += 2;
 	}
 
+	/*
 	// turns out that the string is of odd length
 	if(hex[i]) {
 		return -1;
 	}
+	*/
 
 	return (int)(i / 2);
 }
@@ -1052,7 +1056,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 	// then send it over as cookie
 	
 	size_t sha_input_len = 0;
-	char sha_input[128] = { 0 };
+	char sha_input[128] = { 0 }; // "lorem ipsum dasum scasf 1213 sfaf" };
 	memcpy(sha_input, username_value->string.chars, strlen(username_value->string.chars));
 	sha_input_len = strlen(sha_input);
 
@@ -1074,17 +1078,39 @@ void handle_login(int socket, char token[32], char * json_data) {
 	if(index >= 0) {
 		login_ht.entry[index].hash = hash;
 		memcpy(login_ht.entry[index].token, token, 32);
+
+		user_t user = { 0 };
+		memcpy(user.username, 
+			username_value->string.chars, strlen(username_value->string.chars));
+		memcpy(user.password_hash, 
+			password_value->string.chars, strlen(password_value->string.chars));
+		login_ht.entry[index].user = user;
+
 		printf("# login_ht index == %i\n", index);
 	}
 
+#if 0
+	// fffffxxfffffxxffffxxxfffffxx ...
+	printf("GEN TOKEN: ");
+	for(int i = 0; i < 32; i++) {
+		printf("%x", token[i]);
+	}
+	printf("\n");
+#endif
+	char cookie[256] = "sessionID=";
 
-	char cookie[64] = "sessionID=";
-
-	char token_hex[32];
+	char token_hex[128] = { 0 };
 	hex_encode(token_hex, token, 32);
-
-	memcpy(cookie + 10, token, 32);
-	cookie[42] = '\0';
+#if 0
+	printf("HEX TOKEN: ");
+	for(int i = 0; i < 64; i++) {
+		printf("%c", token_hex[i]);
+	}
+	printf("\n");
+#endif
+	size_t hex_len = strlen(token_hex);
+	memcpy(cookie + 10, token_hex, hex_len);
+	cookie[10 + hex_len] = '\0';
 	http_send_wcookie(socket, 200, cookie, NULL, NULL, 0);
 
 //	http_send_200(socket);
@@ -1120,7 +1146,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 
 
 
-int extract_sessionid_token(char * buffer, char * token) {
+int extract_sessionid_token(char * buffer, unsigned char * token) {
 	char * cookie_header = strstr(buffer, "Cookie:");
 	if(cookie_header == NULL) return 0;
 
@@ -1139,17 +1165,29 @@ int extract_sessionid_token(char * buffer, char * token) {
 	}
 
 	size_t len = session_end ? (size_t)(session_end - session_start) : strlen(session_start);
+	printf("req cookie len: %li\n", len);
 	if(len == 0) {
 		return 0;
 	}
+	// if(len > 32) len = 32;
 
-	if(len > 32) {
-		len = 32;
+	// grab the shit
+	char hex[128] = { 0 };
+	for(size_t i = 0; i < len; i++) {
+		hex[i] = session_start[i];
 	}
-
+#if 1
+	int l1 = hex_decode(token, 32, hex);
+	printf("hex decoded bytes: %i\n", l1);
+	if(l1 == -1) {
+		printf("HEX DECODE ERROR\n");
+	}
+#endif
+	/*
 	for(int i = 0; i < len; i++) {
 		token[i] = session_start[i];
 	}
+	*/
 
 	return 1;
 }
@@ -1170,17 +1208,19 @@ void handle_api_request(int socket, char * req_path, char * buffer, char * json_
 	}
 
 	int has_cookie = 0;
-	unsigned char token[32] = { 0 };
+	unsigned char token_hex[128] = { 0 };
+	unsigned char token[64] = { 0 };
 
 	// grab the sessionID data from the request buffer - not safe
 	// cookie = "sessionID="
-	//
+	
 	has_cookie = extract_sessionid_token(buffer, token);
 	if(has_cookie) {
-		printf("Token: ");
+		printf("Token: --");
 		for(int i = 0; i < 32; i++) {
 			printf("%x", token[i]);
 		}
+		printf("--\n");		
 		printf("\n");
 	}
 
@@ -1191,7 +1231,21 @@ void handle_api_request(int socket, char * req_path, char * buffer, char * json_
 	}
 
 	// check if logged in
+	unsigned long hash = hash_djb2(token, 32);
+	int index = login_ht_get_hash_index(&login_ht, hash);
+	if(index < 0) {
+		http_send_401(socket);
+		return;
+	}
 
+	if(memcmp(login_ht.entry[index].token, token, 32) == 0) {
+		char * username = login_ht.entry[index].user.username;
+		printf("user '%s' is logged in, cont. handling request!\n", username);
+	} else {
+		printf("issue?!\n");
+		http_send_401(socket);
+		return;
+	}
 #if 0
 	if (request == "api/v1/login") {
 		user = { 0 }; // sqlite.get_user_on_match(username, hashsalt(password));
@@ -1220,7 +1274,8 @@ void handle_api_request(int socket, char * req_path, char * buffer, char * json_
 	}
 	#endif
 
-
+	http_send_200(socket);
+#if 0
 	printf("HELP\n");
 
 	char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
@@ -1230,7 +1285,7 @@ void handle_api_request(int socket, char * req_path, char * buffer, char * json_
 	char * cookie = "session_id=admin123";
 
 	http_send_wcookie(socket, 200, cookie, "application/json", (uint8_t*)json_data, json_len);
-	
+#endif	
 	close(socket);
 
 	return;
