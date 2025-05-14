@@ -252,7 +252,7 @@ int hex_decode(unsigned char * out, char * hex) {
 	}
 
 	// turns out that the string is of odd length
-	if(in[i]) {
+	if(hex[i]) {
 		return -1;
 	}
 
