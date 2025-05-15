@@ -1203,6 +1203,47 @@ int extract_sessionid_token(char * buffer, unsigned char * token) {
 	return 1;
 }
 
+int is_logged_in(unsigned char * token) {
+	if(token == NULL) return 0;
+
+	pthread_mutex_lock(&login_mutex);
+
+        // check if logged in - move into handle requests and block access / redirect if not allowed
+        unsigned long hash = hash_djb2(token, 32);
+        int index = login_ht_get_hash_index(&login_ht, hash);
+        if(index < 0) {
+                pthread_mutex_unlock(&login_mutex);
+                return 0;
+        }
+
+	pthread_mutex_unlock(&login_mutex);
+
+	return 1;
+}
+
+login_entry_t * get_session_ptr(unsigned char * token, unsigned long hash) {
+	if(hash == 0) {
+		if(token == NULL) {
+			return NULL;
+		}
+		hash = hash_djb2(token, 32);
+	}
+	
+	pthread_mutex_lock(&login_mutex);
+
+	int index = login_ht_get_hash_index(&login_ht, hash);
+	if(index < 0) {
+		pthread_mutex_unlock(&login_mutex);
+		return NULL;
+	}
+
+	login_entry_t * ptr = &login_ht.entry[index];
+
+	pthread_mutex_unlock(&login_mutex);
+
+	return ptr;
+}
+
 // thread_response_buffer, thread_request_buffer
 void handle_api_request(int socket, int method, char * req_path, char * buffer, char * json_in_data) {
 	// should already have been done!!!!
@@ -1244,28 +1285,28 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 	printf("lock login 2\n");
 	pthread_mutex_lock(&login_mutex);
 
-	// check if logged in
+	// check if logged in - move into handle requests and block access / redirect if not allowed
 	unsigned long hash = hash_djb2(token, 32);
 	int index = login_ht_get_hash_index(&login_ht, hash);
 	if(index < 0) {
 		printf("unlock login 2\n");
 		pthread_mutex_unlock(&login_mutex);
+
 		http_send_401(socket);
-		// close(socket);
 		return;
 	}
 
 	if(memcmp(login_ht.entry[index].token, token, 32) == 0) {
 		char * username = login_ht.entry[index].user.username;
 		printf("user '%s' is logged in, cont. handling request!\n", username);
-	} else {
-		printf("issue?!\n");
-		http_send_401(socket);
-		// close(socket);
+	} else {		
 		printf("unlock login 2\n");
 		pthread_mutex_unlock(&login_mutex);
+
+		http_send_401(socket);
 		return;
 	}
+
 	printf("unlock login 2\n");
 	pthread_mutex_unlock(&login_mutex);
 
@@ -1436,7 +1477,34 @@ void handle_request(int socket) {
 	printf("path: %s\n", path);
 	printf("version: %s\n", version);
 
-	
+	// the order of operations here is wrong
+	// TODO: handle request should split out all the necessary data
+	// and check the path against the protected/open lists
+	// then if its in protected, check auth, then respond
+	// if its open, just respond
+#if 0
+	printf("AAA\n");
+	// check if logged in here
+	char session_token[32] = { 0 };
+	int auth = 0;
+	login_entry_t * session_ptr = NULL;
+
+	printf("BBB\n");
+	if(!extract_sessionid_token(buffer, session_token)) {
+		http_send_401(socket);
+		close(socket);
+		return;
+	}
+
+	printf("CCC\n");
+	auth = is_logged_in(session_token);
+	if(auth) {
+		session_ptr = get_session_ptr(session_token, 0);
+	}
+
+	printf("DDD\n");
+#endif
+
 	// state
 	int is_api_request_ = (strncmp(path, "/api", 4) == 0); // use strncmp or a known cmp
 	#if 0
@@ -1448,9 +1516,7 @@ void handle_request(int socket) {
 	}
 	#endif
 
-	printf("XXX\n");
 	if(is_api_request_) {
-	//int method_ = get_method(method_str);
 		size_t content_length = 0;
 
 		char * p = buffer;
