@@ -1103,6 +1103,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
 	sha256_final(&sha_ctx, (uint8_t *)token);
 
+	printf("lock login\n");
 	pthread_mutex_lock(&login_mutex);
 
 	unsigned long hash = 0;
@@ -1132,9 +1133,11 @@ void handle_login(int socket, char token[32], char * json_data) {
 		printf("# login_ht index == %i\n", index);
 	}
 
+	printf("unlock login\n");
 	pthread_mutex_unlock(&login_mutex);
 
-	char cookie[256] = "sessionID=";
+	printf("build user sessionID\n");
+	char cookie[512] = "sessionID=";
 	char token_hex[128] = { 0 };
 	hex_encode(token_hex, token, 32);
 
@@ -1147,7 +1150,9 @@ void handle_login(int socket, char token[32], char * json_data) {
 
 	char * json_out_data = "{\"redirect_location\":\"/mypage.html\"}";
 
+	printf("send wcookie\n");
 	http_send_wcookie(socket, 200, cookie, "application/json", json_out_data, strlen(json_out_data));
+	printf("handled login!\n");
 }
 
 
@@ -1209,6 +1214,7 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 
 	if(json_in_data == NULL) {
 		http_send_401(socket);
+		close(socket);
 		return;
 	}
 
@@ -1235,12 +1241,17 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 		return;
 	}
 
+	printf("lock login 2\n");
 	pthread_mutex_lock(&login_mutex);
+
 	// check if logged in
 	unsigned long hash = hash_djb2(token, 32);
 	int index = login_ht_get_hash_index(&login_ht, hash);
 	if(index < 0) {
+		printf("unlock login 2\n");
+		pthread_mutex_unlock(&login_mutex);
 		http_send_401(socket);
+		// close(socket);
 		return;
 	}
 
@@ -1250,8 +1261,12 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 	} else {
 		printf("issue?!\n");
 		http_send_401(socket);
+		// close(socket);
+		printf("unlock login 2\n");
+		pthread_mutex_unlock(&login_mutex);
 		return;
 	}
+	printf("unlock login 2\n");
 	pthread_mutex_unlock(&login_mutex);
 
 	// handle actual requests
@@ -1259,6 +1274,13 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 
 	// to parse request by json
 	// arena_clear(&thread_json_arena); 
+
+	// TODO: (BUG)
+	// when i start by accessing MYPAGE and the cookie still exists - it breaks
+	// then i cant login using the login page
+	// and a thread seemingly gets hung
+	//
+	// it seems like the mutex is still locked but i dont know...
 
 	switch(method) {
 		// should never be used btw - js disallows it. use POST instead
@@ -1303,7 +1325,7 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 					output = json_write(&thread_json_arena, result, &output_size);
 					
 					http_send(socket, 200, "application/json", (uint8_t*)output, output_size);
-					close(socket);
+					// close(socket);
 					return;
 				}
 			}
@@ -1360,7 +1382,7 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 
 	http_send_wcookie(socket, 200, cookie, "application/json", (uint8_t*)json_data, json_len);
 #endif	
-	close(socket);
+	// close(socket);
 
 	return;
 }
