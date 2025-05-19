@@ -840,6 +840,7 @@ struct http_request_s {
 struct user_s {
 	char username[64];
 	char password_hash[128];
+	unsigned int id; // db.user_id
 };
 typedef struct user_s user_t;
 
@@ -988,6 +989,15 @@ int login_ht_clear_hash_index(login_ht_t * ht, unsigned long hash) {
 	return 1; // err
 }
 
+int login_ht_clear_index(login_ht_t * ht, int index) {
+	if(ht == NULL || index < 0) return 1;
+
+	login_entry_t * entry = &ht->entry[index];
+	memset(entry, 0, sizeof(login_entry_t));
+
+	return 0;
+}
+
 #if 0
 void ht_test() {
 	printf("test login ht\n");
@@ -1044,6 +1054,29 @@ const char * users[3] = {
 	"cat",
 	"dog"
 };
+
+int handle_logout(char token[32]) {
+	printf("attempt logout!\n");
+
+	// arena_clear(&thread_json_arena);
+
+	pthread_mutex_lock(&login_mutex);
+
+        // check if logged in - move into handle requests and block access / redirect if not allowed
+        unsigned long hash = hash_djb2(token, 32);
+        int index = login_ht_get_hash_index(&login_ht, hash);
+        if(index < 0) {
+                pthread_mutex_unlock(&login_mutex);
+                return 0;
+        }
+
+	// login_ht_clear_hash_index(&login_ht, hash);
+	int rval = login_ht_clear_index(&login_ht, index);
+
+        pthread_mutex_unlock(&login_mutex);
+
+	return rval;
+}
 
 void handle_login(int socket, char token[32], char * json_data) {
 	arena_clear(&thread_json_arena);
@@ -1249,6 +1282,8 @@ login_entry_t * get_session_ptr(unsigned char * token, unsigned long hash) {
 
 // thread_response_buffer, thread_request_buffer
 void handle_api_request(int socket, int method, char * req_path, char * buffer, char * json_in_data) {
+	printf("handle api request\n");
+
 	// should already have been done!!!!
 	// figure out which action/ route to take
 	int api_version = 0;
@@ -1339,6 +1374,20 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 		printf("API get stuff from user with JSON\n");
 
 		json_result_t result = json_parse(&thread_json_arena, json_in_data);
+
+		if(strcmp(req_path, "/api/v1/logout") == 0) {
+			printf("api logout\n");
+
+			int rval = handle_logout(token);
+			if(rval) {
+				http_send_401(socket);
+			} else {
+				char * deleted_cookie = "sessionID=deleteed; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n";
+				size_t del_len = strlen(deleted_cookie);
+				// http_wcookie(socket, 200, deleted_cookie, 0, NULL, del_len);
+				http_send_wcookie(socket, 200, deleted_cookie, NULL, NULL, 0);
+			}
+		}
 
 		if(strcmp(req_path, "/api/v1/user") == 0) {
 			printf("attempt to bullshit\n");
@@ -1433,6 +1482,8 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 
 // file request - standard OK for all
 void handle_request(int socket) {
+	printf("handle request\n");
+
 	// todo: assert before entering the handle_client call
 	if(socket <= 0) {
 		printf("client socket error!\n");
@@ -1520,6 +1571,8 @@ void handle_request(int socket) {
 	#endif
 
 	if(is_api_request_) {
+		printf("# is api request == true\n");
+
 		size_t content_length = 0;
 
 		char * p = buffer;
@@ -1532,12 +1585,16 @@ void handle_request(int socket) {
 			content_length = len;
 		}
 
+		// if its 0, then we might still want to handle the actual request
+		// since not all of them takes json data or other data
+		#if 0
 		if(len == 0) {
 			// something is probably wrong?
 			http_send_401(socket);
 			close(socket);
 			return;
 		}
+		#endif
 
 		// call api handler with method
 		char * eorp = (buffer + bytes_read) - content_length;
