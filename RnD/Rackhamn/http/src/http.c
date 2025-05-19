@@ -16,6 +16,9 @@
 #include <sys/syscall.h>
 #include <stdarg.h>
 
+#include <sqlite3.h>
+#define DB_PATH_STR "../../Gabbemannen00/updated_database.db" 
+
 // ARENA
 #include "../../arena/arena.h"
 
@@ -1705,7 +1708,57 @@ ROOT_DIR + "/img/*.svg"
 	close(socket);
 }
 
+void db_test(void) {
+	printf("DB TEST BEGIN\n");
+
+	// DB_PATH_STR
+	int rc;
+	sqlite3 * db;
+	sqlite3_stmt * stmt;
+	char cmd_buf[1024] = { 0 };
+
+	// 1|john_doe|hashed_password|john.doe@example.com|John|Doe
+	// 2|gabriel_carlsson|hashed_password|gabriel-carlsson@hotmail.se|Gabriel|Carlsson
+	snprintf(cmd_buf, 1024 - 1, "SELECT * FROM users;");
+
+	rc = sqlite3_open(DB_PATH_STR, &db);
+
+	rc = sqlite3_prepare_v2(db, cmd_buf, -1, &stmt, NULL);
+	if(rc != SQLITE_OK) {
+		printf("prepare call error: %i\n", rc);
+		sqlite3_close(db);
+		return;
+	}
+
+	int i = 1;
+	while(sqlite3_step(stmt) == SQLITE_ROW) {
+		int id = sqlite3_column_int(stmt, 0);
+		// const char * id_zptr = sqlite3_column_text(stmt, 0);
+		const char * username_ptr = (const char *)sqlite3_column_text(stmt, 1);
+		const char * hash_pw_ptr = (const char *)sqlite3_column_text(stmt, 2);
+		const char * email_ptr = (const char *)sqlite3_column_text(stmt, 3);
+		const char * firstname_ptr = (const char *)sqlite3_column_text(stmt, 4);
+		const char * lastname_ptr = (const char *)sqlite3_column_text(stmt, 5);
+
+		printf("user %-2i: %s\n", id, username_ptr);
+		printf("name:  %s %s\n", firstname_ptr, lastname_ptr);
+		printf("email: %s\n", email_ptr);
+		printf("\n");
+
+		i++;
+	}
+
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
+	printf("DB TEST END\n");
+}
+
 int main(int argc, char ** argv) {
+/*
+	db_test();
+	return 0;
+*/
 
 //	ht_test();
 //	return 0;

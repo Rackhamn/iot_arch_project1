@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My SPA App</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    nav {
+      background: #222;
+      color: white;
+      display: flex;
+      padding: 1em;
+    }
+
+    nav a {
+      color: white;
+      margin-right: 1em;
+      text-decoration: none;
+    }
+
+    .page {
+      display: none;
+      padding: 1em;
+    }
+
+    .active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#profile">Profile</a>
+    <a href="#logout">Logout</a>
+  </nav>
+
+  <div id="home" class="page">
+    <h2>Home</h2>
+    <p>Welcome to the SPA!</p>
+  </div>
+
+  <div id="profile" class="page">
+    <h2>Profile</h2>
+    <pre id="profile-data">Loading...</pre>
+  </div>
+
+  <script>
+    async function checkAuth() {
+      // Ask server if user is authenticated (cookie will be sent automatically)
+      const res = await fetch('https://your-api.com/auth/check', {
+        credentials: 'include' // send cookies (including HttpOnly sessionID)
+      });
+
+      if (!res.ok) {
+        window.location.href = 'login.html';
+      }
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('https://your-api.com/profile', {
+          credentials: 'include'
+        });
+        if (res.status === 401) {
+          window.location.href = 'login.html';
+          return;
+        }
+        const data = await res.json();
+        document.getElementById('profile-data').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('profile-data').textContent = 'Failed to load profile.';
+      }
+    }
+
+    async function logout() {
+      await fetch('https://your-api.com/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      window.location.href = 'login.html';
+    }
+
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+      if (pageId === 'logout') {
+        logout();
+        return;
+      }
+
+      const page = document.getElementById(pageId);
+      if (page) {
+        page.classList.add('active');
+        if (pageId === 'profile') loadProfile();
+      } else {
+        showPage('home');
+      }
+    }
+
+    window.addEventListener('hashchange', () => {
+      const page = location.hash.replace('#', '') || 'home';
+      showPage(page);
+    });
+
+    // Initial load
+    (async () => {
+      await checkAuth(); // Redirect if session cookie is invalid
+      const initialPage = location.hash.replace('#', '') || 'home';
+      showPage(initialPage);
+    })();
+  </script>
+</body>
+</html>
+

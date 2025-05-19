@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tag Manager</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 5px 0; }
+    .tag-item { display: flex; gap: 10px; align-items: center; }
+    .tag-desc { flex-grow: 1; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Tags</h2>
+  <ul id="tag-list"></ul>
+
+  <h3>Add New Tag</h3>
+  <input type="text" id="new-tag-desc" placeholder="Tag description">
+  <button onclick="addTag()">Add Tag</button>
+
+  <br><br>
+  <button onclick="deleteSelected()">Delete Selected</button>
+
+  <script>
+    const tagList = document.getElementById('tag-list');
+
+    // Fetch and render all tags
+    function fetchTags() {
+      fetch('/api/v1/tags')
+        .then(res => res.json())
+        .then(data => {
+          tagList.innerHTML = '';
+          data.tags.forEach(tag => {
+            tagList.appendChild(createTagElement(tag));
+          });
+        });
+    }
+
+    // Create a tag <li> element
+    function createTagElement(tag) {
+      const li = document.createElement('li');
+      li.className = 'tag-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = tag.tag_id;
+
+      const span = document.createElement('span');
+      span.textContent = tag.tag_desc;
+      span.className = 'tag-desc';
+
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.onclick = () => editTag(span, tag);
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      li.appendChild(editBtn);
+      return li;
+    }
+
+    // Add new tag
+    function addTag() {
+      const desc = document.getElementById('new-tag-desc').value.trim();
+      if (!desc) return alert("Please enter a tag description.");
+
+      fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_desc: desc })
+      }).then(() => {
+        document.getElementById('new-tag-desc').value = '';
+        fetchTags();
+      });
+    }
+
+    // Edit a tag inline
+    function editTag(span, tag) {
+      const input = document.createElement('input');
+      input.value = tag.tag_desc;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          const newDesc = input.value.trim();
+          if (!newDesc) return;
+
+          fetch('/api/v1/tags', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag_id: tag.tag_id, tag_desc: newDesc })
+          }).then(fetchTags);
+        }
+      };
+
+      span.replaceWith(input);
+      input.focus();
+    }
+
+    // Delete selected tags
+    function deleteSelected() {
+      const selected = [...document.querySelectorAll('#tag-list input[type="checkbox"]:checked')]
+        .map(cb => parseInt(cb.value));
+
+      if (selected.length === 0) return alert("Select at least one tag to delete.");
+
+      fetch('/api/v1/tags', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selected)
+      }).then(fetchTags);
+    }
+
+    // Initial load
+    fetchTags();
+  </script>
+</body>
+</html>
+
