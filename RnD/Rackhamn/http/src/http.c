@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <stdarg.h>
+#include <getopt.h> // lib?
 
 #include <sqlite3.h>
 #define DB_PATH_STR "../../Gabbemannen00/updated_database.db" 
@@ -275,14 +276,27 @@ pid_t gettid(void) {
 	return syscall(SYS_gettid);
 }
 
+
+//TODO: 
+//	create struct thread_context_s please.
+//	everything can be in there and passed by ptr.
+// ex:
+//	__thread thread_context_t thread_ctx;
+
 // thread local specific data
 // if hash is to be used outside of a given thread
 // then the data needs to be copied over to a global array / other thread data
 // TODO: make struct thread_ctx plz
 __thread pid_t thread_id;
-__thread SHA256_CTX thread_sha256_ctx;
-__thread uint8_t thread_hash[32]; // TODO: plz drop
 
+// TODO: remove per-thread sha256
+// its only used on login and instansiated for runtime only
+__thread SHA256_CTX thread_sha256_ctx;
+__thread uint8_t thread_hash[32];
+
+// TODO: this should be somewhere else i think...
+// (part of the request buffer maybe?)
+// altough who knows...
 __thread arena_t thread_json_arena;
 
 __thread char * thread_request_buffer;
@@ -290,7 +304,10 @@ __thread size_t thread_request_buffer_size;
 __thread char * thread_response_buffer;
 __thread size_t thread_response_buffer_size;
 
-int task_queue[MAX_QUEUE];
+
+// TODO: store into struct plz
+// 	we just store socket file descriptors (signed 32-bit integers) in it!
+int task_queue[MAX_QUEUE] = { 0 };
 int task_front = 0;
 int task_rear = 0;
 int task_count = 0;
@@ -415,11 +432,200 @@ void * worker(void * arg) {
 }
 #endif
 
+// separete thread 
+// command line interface for the server
+// can do simpler things like:
+// 	list all logged in users
+// 	logout a specific user
+// 	logout all user
+//
+// notes:
+// - 	would be nice to have more specific features like
+// 	1. set the maximum amount of worker threads
+//	2. xxx
+//	> and not just use them from the compiled values.
+
+void print_cli_help_msg(void) {
+#define CLI_BMSG "%s %s"
+#define TAB_MSG "\t%.*s : %s\n"
+
+	int olen = 10;
+	printf(CLI_BMSG, "[CLI]", "HTTP Server CLI Help Message:\n");
+	printf(TAB_MSG, olen, "help", "Display this message");
+	printf(TAB_MSG, olen, "status", "Tells the status of the HTTP server");
+	printf(TAB_MSG, olen, "quit", "Quits the HTTP Server threads and the program");
+	printf("\n");
+
+#undef CLI_BMSG
+#undef TAB_MSG
+}
+
+int handle_cli_command(const char * cmd, size_t cmd_len) {
+	if(strcmp(cmd, "help") == 0) {
+		print_cli_help_msg();	
+	}
+	else if(strcmp(cmd, "status") == 0) {
+		printf("[CLI] Server is running...\n");
+	} 
+	else if(strcmp(cmd, "quit") == 0) {
+		printf("[CLI] quit command recv.!\n");
+		running = 0;
+                pthread_cond_broadcast(&queue_cond);
+
+		return -1;
+	} else {
+		printf("[CLI] unknown command: %s\n", cmd);
+	}
+
+	return 0;
+}
+
+void * cli_worker(void * arg) {
+	thread_id = gettid();
+
+	thread_request_buffer_size = sizeof(char) * 8192;
+	thread_request_buffer = malloc(thread_request_buffer_size);
+	if(thread_request_buffer == NULL) {
+		printf("thread %i could not allocate request buffer!\n", thread_id);
+		return NULL;
+	}
+	memset(thread_request_buffer, 0, thread_request_buffer_size);
+
+	thread_response_buffer_size = sizeof(char) * 8192;
+	thread_response_buffer = malloc(thread_response_buffer_size);
+	if(thread_response_buffer == NULL) {
+		printf("thread %i could not allocate response buffer!\n", thread_id);
+		return NULL;
+	}
+	memset(thread_response_buffer, 0, thread_response_buffer_size);
+
+	printf("Thread CLI Worker Start: %i\n", thread_id);
+
+	char * cli_input = thread_request_buffer;
+	size_t cli_size = thread_request_buffer_size;
+	int cli_running = 1; // should this be global or not?
+
+	while(cli_running == 1) {
+
+		// ----------
+		pthread_mutex_lock(&queue_mutex);
+		if(running == 0) {
+			pthread_mutex_unlock(&queue_mutex);
+			cli_running = 0;
+			break;
+		}
+		pthread_mutex_unlock(&queue_mutex);
+		// ----------
+
+		fd_set read_fds;
+		FD_ZERO(&read_fds);
+		FD_SET(STDIN_FILENO, &read_fds);
+
+		struct timeval timeout = { 1, 0 }; // 1sec timeout...
+	
+		// works because we have not reassigned STDIN_FILENO in the program!
+		int ret = select(STDIN_FILENO + 1, &read_fds, NULL, NULL, &timeout);
+
+		if(ret > 0 && FD_ISSET(STDIN_FILENO, &read_fds)) {
+			if(fgets(cli_input, cli_size - 1, stdin)) {
+				cli_input[strcspn(cli_input, "\n")] = 0;
+				ret = handle_cli_command(cli_input, cli_size);
+				if(ret == -1) {
+					printf("[CLI] exit while loop!\n");
+					break;
+				}
+			}
+		}
+	}
+
+	if(thread_request_buffer != NULL) {
+		free(thread_request_buffer);
+		thread_request_buffer = NULL;
+		thread_request_buffer_size = 0;
+	}
+
+	if(thread_response_buffer != NULL) {
+		free(thread_response_buffer);
+		thread_response_buffer = NULL;
+		thread_response_buffer_size = 0;
+	}
+
+	printf("Thread CLI Worker End: %i\n", thread_id);
+	return NULL;
+}
+
+
+
+// does bytes equals bytes during length?
+// assumes that (a != NULL) and (b != NULL) and len != 0
+//
+// ret:
+// 	1 on match
+// 	0 on failure
+int eq_bytes(char * a, char * b, size_t len) {
+	if(a == NULL || b == NULL || len == 0) return 0;
+	if(a == b) return 1;
+
+	// great for SIMD 	;)
+	for(size_t i = 0; i < len; i++) {
+		if(a[i] != b[i]) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
 int get_http_method_from_string(char * method_str) {
+#if 1
+	// ASSERT(method_str != NULL);
+	if(method_str == NULL) return -1;
+
+// TODO: move into code indexed mapped table
+#define STRLEN(s) (sizeof(s) - 1)
+#define SSTR(x) #x
+#define MSTR(x) { SSTR(x), STRLEN(SSTR(x)), (int)(x) }
+
+	struct _mstr_s { 
+		char * str;
+		size_t len;
+		int value;
+	};
+
+	// i know the 9 is known somewhere ;)
+	// store in .rodata
+	static const
+	struct _mstr_s _mstr[9] = {
+		MSTR(GET),
+		MSTR(POST),
+		MSTR(PUT),
+		MSTR(DELETE),
+		MSTR(PATCH),
+		MSTR(HEAD),
+		MSTR(OPTIONS),
+		MSTR(TRACE),
+		MSTR(CONNECT)
+		// { "GET", 3, GET },
+	};
+
+	int index = 0;
+	while(index < 9) {
+		if(memcmp(method_str, _mstr[index].str, _mstr[index].len) == 0) {
+			return _mstr[index].value;
+		}
+		index++;
+	}
+
+	return -1;
+#else
 	if(method_str == NULL) return -1;
 	int len = strlen(method_str);
 	// wildy not good
-	// why not generate a tree and walk it by chars from method_str???
+	// why not generate a tree and walk it by chars from method_str?
+	// 	could do a per bit check with simd.
+	// 	there are only so many options that might match.
+	// 	as soon as it misses, fail it.
 	if(strncmp(method_str, "GET", 3) == 0) return GET;
 	if(strncmp(method_str, "POST", 4) == 0) return POST;
 	if(strncmp(method_str, "PUT", 3) == 0) return PUT;
@@ -431,6 +637,7 @@ int get_http_method_from_string(char * method_str) {
 	if(strncmp(method_str, "CONNECT", 7) == 0) return CONNECT;
 
 	return -1;
+#endif
 }
 
 // are we using this?
@@ -686,9 +893,6 @@ ROOT_DIR + "/img/*.png"
 ROOT_DIR + "/img/*.svg"
 */
 
-// TODO: move into code indexed mapped table
-#define STRLEN(s) (sizeof(s) - 1)
-
 /*
  * note: we dont use dprintf or write since they can end up causing a PIPE error.
  * we dont want that, so well just use send() with MSG_NOSIGNAL instead.
@@ -752,7 +956,10 @@ void http_send_wcookie(int socket, int status_code, char * cookie_str, char * mi
 
 	if(cookie_str != NULL) {
 		hprintf(socket, "Set-Cookie: %s\r\n", cookie_str);
+		/*
+		hprintf(socket, "Set-Cookie: %s\r\n", cookie_str);
 		hprintf(socket, "Path=/; HttpOnly; SameSite=Strict; Secure;\r\n");
+		*/
 	}
 
 	hprintf(socket, "\r\n");
@@ -1174,19 +1381,25 @@ void handle_login(int socket, char token[32], char * json_data) {
 
 	printf("build user sessionID\n");
 	char cookie[512] = "sessionID=";
+	
 	char token_hex[128] = { 0 };
 	hex_encode(token_hex, token, 32);
 
 	size_t hex_len = strlen(token_hex);
-	memcpy(cookie + 10, token_hex, hex_len);
-	cookie[10 + hex_len] = '\0';
+	// memcpy(cookie + 10, token_hex, hex_len);
+	// cookie[10 + hex_len] = '\0';
 	
+	snprintf(cookie, 512 - 1,
+		"sessionID=%.64s; Path=/; HttpOnly; SameSite=Strict; Secure",
+		token_hex);
+
 	// build json for sending
 	// json -> redirect_location = "/mypage.html"
 
 	char * json_out_data = "{\"redirect_location\":\"/mypage.html\"}";
 
 	printf("send wcookie\n");
+	// "sessionID=XYZ; Path=/; HttpOnly; SameSite=Strict; Secure;"
 	http_send_wcookie(socket, 200, cookie, "application/json", json_out_data, strlen(json_out_data));
 	printf("handled login!\n");
 }
@@ -1382,10 +1595,10 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 			if(rval) {
 				http_send_401(socket);
 			} else {
-				char * deleted_cookie = "sessionID=deleteed; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n";
-				size_t del_len = strlen(deleted_cookie);
+				char * del_cookie = "sessionID=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; HttpOnly; SameSite=Strict; Secure";
+				size_t del_len = strlen(del_cookie);
 				// http_wcookie(socket, 200, deleted_cookie, 0, NULL, del_len);
-				http_send_wcookie(socket, 200, deleted_cookie, NULL, NULL, 0);
+				http_send_wcookie(socket, 200, del_cookie, NULL, NULL, 0);
 			}
 		}
 
@@ -1811,7 +2024,34 @@ void db_test(void) {
 	printf("DB TEST END\n");
 }
 
+#if 0
+// TODO: move into http_opts.h
+struct option_s {
+	const char * name;
+	int has_arg;
+	int * flag;
+	int val;
+};
+#endif
+
+void print_program_help_msg(const char * argv0) {
+#define OPT_MSG "\t%.*s, %s : %s\n"
+#define printf_opt(olen, opt_short, opt_long, opt_desc) \
+	printf(OPT_MSG, olen, opt_short, opt_long, opt_desc)
+
+	int olen = 10;
+	printf("> %s,  HELP:\n", argv0);
+	printf_opt(olen, "p", "port", "Set the TCP port number");
+	printf_opt(olen, "v", "verbose", "Toggle verbosity ON");
+	printf_opt(olen, "h", "help", "Display this message");
+	printf_opt(olen, "d", "root_dir", "Set the Root Directory for the Server content");
+
+#undef printf_opt
+#undef OPT_MSG
+}
+
 int main(int argc, char ** argv) {
+	printf("> HTTP SERVER BEGIN\n");
 /*
 	db_test();
 	return 0;
@@ -1819,6 +2059,131 @@ int main(int argc, char ** argv) {
 
 //	ht_test();
 //	return 0;
+
+
+	#define CWD_MAX_SIZE	1024
+	char cwd_buffer[CWD_MAX_SIZE] = { 0 };
+	char * _cwd = getcwd(cwd_buffer, CWD_MAX_SIZE);
+
+	// TODO: handle vargs input for settings
+	int opt = 0;
+	int opt_idx = 0;
+
+	// TODO: set global variables or per_context_var?
+	int port = PORT;
+	int verbose = VERBOSE; 
+
+	#define ROOT_DIR_SIZE	1024
+	char root_dir[ROOT_DIR_SIZE] = { 0 };
+	size_t root_dir_size = 0;
+
+	// desc:
+	static struct option long_options[] = {
+		{ "port",    required_argument, 0, 'p' },
+		{ "verbose", no_argument,       0, 'v' },
+		{ "help",    no_argument,       0, 'h' },
+		{ "dir",     required_argument, 0, 'd' },
+		{ 0,         0,                 0,  0  }
+	};
+
+	while((opt = getopt_long(argc, argv, "p:vhd:", long_options, &opt_idx)) != -1) {
+		switch(opt) {
+			case 'p':
+				int rval = atoi(optarg);
+				if(rval != 0) {
+					port = atoi(optarg);
+				}
+				break;
+			case 'v':
+				verbose = 1;
+				break;
+			case 'h':
+				print_program_help_msg(argv[0]);
+				return 0;
+			case 'd':{
+				char * ptr = optarg;
+
+				// just in case someone does a "-d=XXX"
+				// instead of a "--dir=XXX"
+				if(*ptr == '=') { ptr++; }
+
+				size_t rlen = strlen(ptr);
+				// printf(">>>>> rlen := %li\n", rlen);
+				size_t len = (rlen >= (ROOT_DIR_SIZE - 1)) 
+					? (ROOT_DIR_SIZE - 1) 
+					: rlen;
+
+				if(len != rlen) {
+					fprintf(stderr, "> ERR: rel_root_dir len (%li) is too large!\n", rlen);
+					return 1;
+				}
+				
+				memcpy(root_dir, ptr, len);
+				root_dir[len] = '\0';
+				root_dir_size = len;
+			} break;
+			case '?':
+			default:
+				fprintf(stderr, "Use --help to see the options.\n");
+				return 1;
+		}
+	}
+
+	printf("> HTTP Server Port = %d\n", port);
+	if(verbose) {
+		printf("> Verbose Mode Enabled.\n");
+	}
+
+#if 1
+	// TODO: if rel_root_dir is NULL or length is 0
+	// then use the current working directory of the command / program?
+	// or should we exit?
+	//
+	// TODO: we need to fix the directory if we cannot properly find it.
+	// ex: "www"  -> ("$pwd" + "/" + www")
+	//     "/www" -> ("$pwd" + "/www")
+	//
+	// TODO: merge cwd + rel root dir into one path plz
+	// char rel_root_dir[256] = { 0 };
+	{
+		int index = 0;
+		/*
+		if(root_dir[0] != '/') {
+			root_dir[index++] = '/';
+		}
+		*/
+
+		if((root_dir_size + 1) >= ROOT_DIR_SIZE) {
+			fprintf(stderr, "> ERR: root directory is too large!\n");
+			return 1;
+		}
+
+		if(root_dir[0] == 0 || root_dir_size == 0) {
+			fprintf(stderr, "> ERR: root directory is NULL\n");
+			return 1;
+		}
+
+		// expand root_dir plz
+		if(root_dir[0] != '/') {
+			memmove(root_dir + 1, root_dir, root_dir_size + 1);
+			root_dir[0] = '/';
+		}
+
+		ctx.root_dir = root_dir;
+	}
+#endif
+
+	// error prone....
+	ctx.root_dir = root_dir;
+
+	printf("root-dir (rel)  = \"%s\"\n", ctx.root_dir);
+	printf("root-dir (path) = \"%s\" + \"%s\"\n", _cwd, ctx.root_dir);
+	// TODO: set cwd to rel_root_dir plz
+	// then we dont have to audit/build all files into a really long path
+
+
+
+
 
 	init_login_ht();
 
@@ -1891,50 +2256,19 @@ int main(int argc, char ** argv) {
 	// memset(&session, 0, sizeof(session_t)); // tmp
 
 	signal(SIGINT, sig_handler);
-
-
-	char cwd_buffer[256] = { 0 };
-	char * _cwd = getcwd(cwd_buffer, 256);
-
-	// TODO: merge cwd + rel root dir into one path plz
-	char rel_root_dir[256] = { 0 };
-	// trash
-	{
-		int index = 0;
-		if(argv[1][0] != '/') {
-			rel_root_dir[index++] = '/';
-		}
-		
-		ctx.root_dir = argv[1];
-		size_t root_dir_len = strlen(ctx.root_dir);
-		memcpy(rel_root_dir + index, ctx.root_dir, root_dir_len);
-		index += root_dir_len;
-
-		// depending on the website structure we might not need this at all
-#if 0
-		if(rel_root_dir[index] != '/') {
-			rel_root_dir[index++] = '/';
-			rel_root_dir[index++] = '\0';
-		}
-#endif
-		ctx.root_dir = rel_root_dir;
-	}
-
-	printf("root-dir (rel)  = \"%s\"\n", ctx.root_dir);
-	printf("root-dir (path) = \"%s\" + \"%s\"\n", _cwd, ctx.root_dir);
-
+	
 	ctx.server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if(ctx.server_socket < 0) {
 		printf("Socket creation failed!\n");
 		exit(1);
 	}
 
-	int opt = 1;
-	setsockopt(ctx.server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	int sock_opt = 1;
+	setsockopt(ctx.server_socket, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(sock_opt));
 
 	ctx.server_addr.sin_family = AF_INET;
 	ctx.server_addr.sin_addr.s_addr = inet_addr("0.0.0.0"); // INADDR_ANY;
-	ctx.server_addr.sin_port = htons(PORT);
+	ctx.server_addr.sin_port = htons(port);
 
 	if(bind(ctx.server_socket, (struct sockaddr *)&ctx.server_addr, sizeof(ctx.server_addr)) < 0) {
 		printf("Bind failed!\n");
@@ -1946,7 +2280,7 @@ int main(int argc, char ** argv) {
 		exit(1);
 	}
 
-	printf("Server running on http://localhost:%d\n", PORT);
+	printf("Server running on http://localhost:%d\n", port);
 
 	/*
 	generate_favicon(favicon_ico);
@@ -1977,7 +2311,10 @@ int main(int argc, char ** argv) {
 	}
 	*/
 
-	// pthread_barrier_init(&barrier, NULL, MAX_THREADS);
+	// pthread_barrier_init(&barrieir, NULL, MAX_THREADS);
+	pthread_t cli_thread;
+	pthread_create(&cli_thread, NULL, cli_worker, NULL);
+
 	pthread_t threads[MAX_THREADS];
 	for(int i = 0; i < MAX_THREADS; i++) {
 		/*
@@ -2026,7 +2363,9 @@ int main(int argc, char ** argv) {
 	for(int i = 0; i < MAX_THREADS; i++) {
 		(void)pthread_join(threads[i], NULL);
 	}
-	
+
+	(void)pthread_join(cli_thread, NULL);
+
 	free_login_ht();
 
 	printf("close server socket\n");
@@ -2043,5 +2382,6 @@ int main(int argc, char ** argv) {
 	free(cat_large_img_path);
 
 	printf(" ### Quit : %i ###\n", server_pid);
+	printf("> HTTP SERVER END\n");
 	return 0;
 }
