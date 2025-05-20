@@ -4,22 +4,63 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+// These values can be set when compiling,
+// and certain ones can be set when running the program.
+#ifndef KIB
+// 1024 bytes
+#define KIB			1024
+#endif
+
+#ifndef MIB
+// 1024 * 1024 bytes
+#define MIB			1048576
+#endif
+
+// -----
+
+// Current Working Directory Path Size
+#ifndef CWD_MAX_SIZE
+#define CWD_MAX_SIZE		1024
+#endif
+
+// Content Root Directory Path Size
+#ifndef ROOT_DIR_MAX_SIZE
+#define ROOT_DIR_MAX_SIZE	1024
+#endif
+
+// (currently not implemented)
+#ifndef MAX_FILE_CACHE_SIZE
+#define MAX_FILE_CACHE_SIZE	16
+#endif
+
+// -----
+
 #ifndef PORT
-#define PORT		8080
+#define PORT			8080
 #endif
 
 #ifndef BUFFER_SIZE
-#define BUFFER_SIZE	8192
+#define BUFFER_SIZE		8192
 #endif
 
 #ifndef MAX_THREADS
-#define MAX_THREADS	4
+#define MAX_THREADS		4
 #endif
 
+// Formerly "MAX_SESSIONS"
 #ifndef MAX_QUEUE
-#define MAX_QUEUE	128
+#define MAX_QUEUE		128
 #endif
 
+#ifndef VERBOSE
+#define VERBOSE			0
+#endif
+
+// -----
+
+
+
+// HTTP Server Context Struct
 struct context_s {
 	int server_socket;
 	struct sockaddr_in server_addr;
@@ -28,6 +69,8 @@ struct context_s {
 	struct sockaddr_in client_addr;
 	socklen_t client_len;
 
+	// dont really like that this is a ptr - who owns it and where?!
+	// use a fixed array?
 	char * root_dir; // relative to running directory!!!
 };
 typedef struct context_s context_t;
