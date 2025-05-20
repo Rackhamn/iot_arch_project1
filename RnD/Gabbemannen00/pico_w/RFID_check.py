@@ -17,7 +17,7 @@ print("Hold a tag near the reader.")
 while True:
     (status, tag_type) = rfid.request(rfid.REQIDL)  # Look for a new tag
     if status != rfid.OK:  # if there is no tagg detected yet
-        print("Ingen tagg upptäckt...")
+        print("Searching for a tag...")
         time.sleep(1) # wait 1 sec until next reading to keep a good flow
     else:
         (status, uid) = rfid.anticoll()  # Read the UID of the tag
