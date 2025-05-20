@@ -186,23 +186,29 @@ try:
     leds_on()
     lcd_init()
     leds_off()
-    lcd_write("LCD: Online")
-    leds_on()
-    beep(duration=0.1, volume=10000, frequency=2000)
+    lcd_write("Power: ON")
     lcd_switch_line(0,1)
-    leds_off()
-    time.sleep(0.1)
-    lcd_write("displaying text.")
+    lcd_write("LCD & LED:s...")
     leds_on()
-    beep(duration=0.1, volume=15000, frequency=3000)
+    beep(duration=1, volume=13000, frequency=1832)
     leds_off()
-    time.sleep(0.1)
+    lcd_init()
+    lcd_write("LCD: Connected,")
+    lcd_switch_line(0,1)
+    lcd_write("displays text!.")
     leds_on()
-    beep(duration=0.3, volume=10000, frequency=3000)
-    time.sleep(2)
+    time.sleep(0.1)
     leds_off()
+    beep(duration=0.1, volume=15000, frequency=2500)
+    leds_on()
+    time.sleep(0.1)
+    leds_off()
+    beep(duration=0.1, volume=15000, frequency=2500)
+    leds_on()
     time.sleep(1)
-    
+    leds_off()
+    time.sleep(0.5)
+   
 except OSError:
     beep(duration=1, volume=15000, frequency=500)
     time.sleep(0.1)
@@ -220,18 +226,9 @@ except OSError:
     
 
 #------------------------------------------------------------------------------------------
-
-# home network
-SSID = ""
-PASSWORD = ""
-
-# JENSEN school Wi-Fi
-# SSID = ""
-# PASSWORD = ""
-
-# Gabriel's A35 phone
-#SSID = ""
-#PASSWORD = ""
+# add your wifi information
+SSID = "" # add username
+PASSWORD = "" # add password
 
 # Creating Wi-Fi-object
 wlan = network.WLAN(network.STA_IF)
