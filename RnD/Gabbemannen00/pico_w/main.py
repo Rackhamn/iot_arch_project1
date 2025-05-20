@@ -222,16 +222,16 @@ except OSError:
 #------------------------------------------------------------------------------------------
 
 # home network
-SSID = "ToTTeNIcKe"
-PASSWORD = "Akassa16"
+SSID = ""
+PASSWORD = ""
 
 # JENSEN school Wi-Fi
-# SSID = "JENSEN-Guest"
-# PASSWORD = "Hopper2024"
+# SSID = ""
+# PASSWORD = ""
 
 # Gabriel's A35 phone
-#SSID = "A35"
-#PASSWORD = "Gabbeman00"
+#SSID = ""
+#PASSWORD = ""
 
 # Creating Wi-Fi-object
 wlan = network.WLAN(network.STA_IF)

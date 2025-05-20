@@ -1,0 +1,121 @@
+get socket TCP connection!
+> fork / use thread from pool / place into job pool
+
+parse request:
+	"GET" "$uri" "HTTP/1.1"
+	"Content-Type:" "text/html"
+	"Cookie:" "akhfsakhfi73" 
+	...
+	"data"
+> dont copy the request data into strings.
+> use a hashtable with pointer + info structs to refer with.
+> or use a TOKEN BUFFER with some rules for count.
+
+
+		### TOKEN BUFFER EXAMPLE BEGIN ###
+struct string_s {
+	int offset;
+	int size;
+};
+
+#define TOKEN_UNKNOWN		0
+#define TOKEN_HTTP_METHOD	1
+#define TOKEN_URI		2
+#define TOKEN_HTTP_VERSION	3
+...
+
+struct token_s {
+	uint32_t type; 		// TOKEN_XXX
+	string_s str;
+	int count;		// num of tokens after this as in an array
+};
+
+struct token_list_s {
+	char * src_ptr; 	// pointer to request
+	int num_tokens;
+	token_s * tokens;	// prob in a growing arena buffer
+}
+		### TOKEN BUFFER EXAMPLE END ###
+
+
+// now we need to maybe load the file from DISK to RAM
+// and maybe we need to generate ("render") certain parts of it.
+// the file can be a full HTML page or JPEG or a HTML template.
+
+uri_data = cache_has(uri);
+if uri_data == NULL:
+	data = load_file_from_disk();
+	uri_data = cache_parse_entry(data);
+
+if uri_data != NULL:
+	if uri_data->is_template:
+		generate_data();
+	else if uri_data->is_image:
+		send_image_response_and_data(uri_data);
+
+possibly close connection (check parsed request)
+
+
+
+generate_data():
+	// we would have to check and verify the Cookie for user AUTH
+	// then we can take a DATABASE connection and load / query some data
+	// and then combine it into the HTML ("rendering" on web)
+	// once we have that we give return
+		pointer to data
+		length of data
+		request response information (maybe as tokenlist)
+	then we build the response packet and send it and the data.
+
+
+	when generating the data, it might be so that it uses WAY too much
+	memory.
+	then we might PAGE bound the generative side.
+	we would write the response first, 
+	then for every 4096 bytes that we render,
+	we will stop and send that data over, and then continue rendering
+	until all data has been sent over.
+		might be 2, 4, 16 pages. who knows.
+
+
+-----------------------------
+
+html template:
+
+<div id="thing">{{username}}</div>
+<div onclick="do_js_fetch_and_insert({{stuff}}, this)"></div>
+
+
+
+
+if the html templates are used alot and often, 
+its a good idea to keep them in memory.
+when generating the data, you just have to memcpy the right portions into
+a scratch buffer and generate into them after that.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

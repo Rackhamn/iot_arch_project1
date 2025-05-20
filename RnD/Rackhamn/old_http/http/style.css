@@ -1,0 +1,100 @@
+body {
+	font-family: monospace;
+	font-size: 1rem;
+}
+
+h1 {
+	color: red;
+}
+
+#username {
+	border-bottom: 2px solid #ccc;
+}
+
+.container {
+	display: flex;
+	gap: 20px;
+}
+
+.post_p {
+	border: 2px solid #ccc;
+	min-width: 100px;
+	width: 100%;
+/*	max-width: auto;
+	margin: auto;*/
+}
+
+.pre_p {
+	border: 2px solid #ccc;
+	min-width: 100px;
+}
+
+table {
+	border-collapse: collapse;
+	border: 2px solid #ccc;
+}
+
+thead, tfoot {
+	background-color: #ccc;
+}
+
+th, td {
+	border: 1px solid #ccc;
+	padding: 8px 10px;
+}
+
+tbody > tr:nth-of-type(even) {
+	background-color: rgb(237 238 242);
+}
+
+.regular {
+	text-decoration: none;
+}
+
+.regular a:visited {
+	/* color: #0000EE; */
+	color: #0000ee;
+}
+
+.parts h2 {
+	display: block;
+}
+
+.code {
+	/* display: inline-block; */
+	border: 1px solid #ccc;
+	width: auto;
+	background-color: dimgray;
+	color: white;
+}
+
+.codeD {
+	color: darkviolet;
+}
+
+.codeT {
+	display: inline-block;
+	width: 2em;
+}
+
+.codeL {
+	color: skyblue;
+}
+
+.codeC {
+	color: green;
+}
+
+.parts {
+	overflow: auto;
+	display: block;
+	width: 100%;
+}
+
+.part {
+	display: inline-block;
+	float: left;
+	/* width: 20%; */
+	padding: 2%;
+}
+
