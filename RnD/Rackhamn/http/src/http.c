@@ -363,7 +363,8 @@ int task_dequeue() {
 
 void mt_parse_http_request(http_request_t * req) {
 	char * buffer = thread_request_buffer;
-#if 1
+
+#if defined(VERBOSE)
 	// dump request - use verbose flags!
 	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
 	printf("%s\n", buffer);
@@ -379,11 +380,13 @@ void mt_parse_http_request(http_request_t * req) {
 	// 	also handle %xx into ascii char. what about utf8?
 	// use until CLRF to parse for http version
 	sscanf(buffer, "%s %s %s", req->method, req->path, req->http_version);
+
+#if defined(VERBOSE)
 	printf("method: %s\n", req->method);
 	printf("path: %s\n", req->path);
 	printf("version: %s\n", req->http_version);
+#endif
 
-	
 	// read the total len of the request content body
 	size_t content_length = 0;
 	char * content_length_header = strstr(buffer, "Content-Length:");
@@ -407,6 +410,9 @@ void mt_parse_http_request(http_request_t * req) {
 	if(req->has_cookie == 0) {
 		printf("mt_parse_http_request error - no cookie / token found!\n");
 	}
+
+	// might fail
+	req->content_ptr = buffer + req->request_size - req->content_size;
 }
 
 int mt_read_http_request(http_request_t * req) {
@@ -468,10 +474,12 @@ void * worker(void * arg) {
 		http_request_t request = { 0 };
 		request.socket = task_dequeue();
 
+		// maybe just assert the bs
+		// and check if its still open
 		if(request.socket < 0) {
 			break;
 		}
-
+	
 		status = mt_read_http_request(&request);
 		if(status != 0) {
 			printf("Err: in read_http_request()\n");
@@ -895,7 +903,7 @@ const mime_type_t mime_type_table[] = {
 // htable would be faster
 char * get_mime_type(char * ext) {
 	if(ext == NULL) {
-		return "application/octect-stream";
+		return NULL; // "application/octect-stream";
 	}
 
 	size_t mime_table_size = sizeof(mime_type_table) / sizeof(mime_type_table[0]);
@@ -905,7 +913,7 @@ char * get_mime_type(char * ext) {
 		}
 	}
 
-	return NULL;// "application/octect-stream";
+	return NULL; // "application/octect-stream";
 }
 
 void cleanup_and_exit(int rval) {
@@ -1520,6 +1528,38 @@ login_entry_t * get_session_ptr(unsigned char * token, unsigned long hash) {
 	return ptr;
 }
 
+user_t * get_user_entry_ptr(unsigned char * token) {
+	if(token == NULL) return NULL;
+
+	pthread_mutex_lock(&login_mutex);
+
+	unsigned long hash = hash_djb2(token, TOKEN_SIZE);
+	int index = login_ht_get_hash_index(&login_ht, hash);
+	if(index < 0) {
+		pthread_mutex_unlock(&login_mutex);
+		return NULL;
+	}
+
+	user_t * user = &login_ht.entry[index].user;
+
+	pthread_mutex_unlock(&login_mutex);
+
+	return user;
+}
+
+int is_protected_path(char * path) {
+	// we should really compare against a loaded file with the list of whitelisted resources
+#define _CMP(p) (strncmp(path, p, STRLEN(p) + 1) == 0)
+
+	if(_CMP("/index.html")) return 1;
+	if(_CMP("/mypage.html")) return 1;
+	if(_CMP("/app.html")) return 1;
+
+#undef _CMP
+
+	return 0;
+}
+
 // thread_response_buffer, thread_request_buffer
 //void handle_api_request(int socket, int method, char * req_path, int has_cookie, unsigned char * token, char * buffer, char * json_in_data) {
 void handle_api_request(http_request_t * req) {
@@ -1532,7 +1572,9 @@ void handle_api_request(http_request_t * req) {
 	// bad alias
 	char * in_buf = thread_request_buffer;
 	char * out_buf = thread_response_buffer;
-	char * json_in_data = (thread_request_buffer + req->request_size) - req->content_size;
+
+	// char * json_in_data = (thread_request_buffer + req->request_size) - req->content_size;
+	char * json_in_data = req->content_ptr;
 
 	if(json_in_data == NULL) {
 		http_send_401(req->socket);
@@ -1771,38 +1813,78 @@ TODO: should we add keep-alive sockets?
 */
 	printf("handle request\n");
 
-	// todo: assert before entering the handle_client call
-	if(socket <= 0) {
-		printf("client socket error!\n");
+
+// TODO: move into the request parser
+#if 1
+	char * ext = NULL;
+	char * mime_type = NULL;
+	ext = get_ext(req->path);
+	if(ext == NULL) {
+		/*
+		printf("API CALL\n");
+		// maybe its an api call...
+		// check that or fail
+		http_send_401(req->socket);
+		close(req->socket);
 		return;
+		*/
+	}
+	else {
+		ext++;
+		mime_type = get_mime_type(ext);
+		printf("MIME: %s -> %s\n", ext, mime_type);
+		/*
+		if(mime_type == NULL) {
+			http_send_404(req->socket);
+			close(req->socket);
+			return;
+		}
+		*/
 	}
 
-#if 0
-	printf("AAA\n");
-	// check if logged in here
-	char session_token[TOKEN_SIZE] = { 0 };
-	int auth = 0;
-	login_entry_t * session_ptr = NULL;
+/*
+ROOT_DIR = "./www"
+ROOT_DIR + "/html/*.html"
+ROOT_DIR + "/css/*.css"
+ROOT_DIR + "/js/*.js"
+ROOT_DIR + "/img/*.jpeg"
+ROOT_DIR + "/img/*.png"
+ROOT_DIR + "/img/*.svg"
+*/
 
-	printf("BBB\n");
-	if(!extract_sessionid_token(buffer, session_token)) {
-		http_send_401(socket);
-		close(socket);
-		return;
+	char * _root_dir = "www"; // this should not at all be hc
+	char * _sub_dir = NULL;
+	char real_path[1024] = { 0 };
+	
+	// shitty routing table
+	if(mime_type != NULL) {
+		if(strcmp(mime_type, "text/html") == 0) {
+			_sub_dir = "html";
+		}
 	}
 
-	printf("CCC\n");
-	auth = is_logged_in(session_token);
-	if(auth) {
-		session_ptr = get_session_ptr(session_token, 0);
+	if(_sub_dir != NULL) {
+		snprintf(real_path, sizeof(real_path) - 1, 
+			"%s/%s/%s", 
+			_root_dir,
+			_sub_dir,
+			req->path + 1);
+	} else {
+		snprintf(real_path, sizeof(real_path) - 1, 
+			"%s/%s", 
+			_root_dir,
+			req->path + 1);
 	}
 
-	printf("DDD\n");
+	printf("file path: %s\n", real_path);
 #endif
 
-	// cookie is really irrevelant
-	// question is wheter or not that matches a login token
-	// has_cookie = extract_sessionid_token(buffer, token);
+
+	// store this in the request?
+	int logged_in = 0;
+	user_t * user = NULL;
+
+	// help dump token	
 	if(req->has_cookie) {
 		printf("Token: --");
 		for(int i = 0; i < TOKEN_SIZE; i++) {
@@ -1812,34 +1894,59 @@ TODO: should we add keep-alive sockets?
 		printf("\n");
 	} else {
 		printf("Token: --(null)---\n");
-		// no cookie
-		// check with whitelist here
-
-#if 0
-		// shitty non-working gate
-		if(strncmp(req->path, "/login.html", 11) != 0) {
-		// if(strncmp(path, "/api/v1/login", 13 != 0)) {
-			http_send_302(req->socket, "/login.html");
-		}
-#endif
 	}
-	
+
+	printf("# check if user is logged in\n");
+	if(req->has_cookie) {
+		user = get_user_entry_ptr(req->token);
+		if(user != NULL) {
+			logged_in = 1;
+		} else {
+			logged_in = 0;
+		}
+	}
+
+	printf("# check if resource is protected\n");
+	// if the req->path is public access 
+	// (js, login.html, style.css, cat-image?)
+	// 	continue
+	// else:
+	// 	double check that user is logged in
+	// 	if not:
+	// 		if path_ext/mime is html
+	// 			redirect to /login.html
+	// 		else
+	// 			send 401
+	if(is_protected_path(req->path) == 1) {
+		if(user == NULL) {	
+			http_send_302(req->socket, "/login.html");
+			close(req->socket);
+			return;
+		}
+
+		// check for admin priv. here
+		// ...
+	}
+
+	// this does not work properly	
 #if 0
-	if(strncmp(req_path, "/api/v1/login", 13) == 0) {
+	if(strncmp(req->path, "/api/v1/login", 13) == 0) {
 		printf("API V1 LOGIN\n");
-		handle_login(socket, token, json_in_data);
+		char * json_in_data = req->content_ptr;
+		handle_login(req->socket, req->token, json_in_data);
 		return;
 	} else {
-		if(!has_cookie) {
+		if(!req->has_cookie) {
 			// user is not trying to login
 			// forcibly redirect to login.html
-			http_send_302(socket, "/login.html");
+			http_send_302(req->socket, "/login.html");
 		}
 	}
 #endif
 
 	char * buffer = thread_request_buffer;
-	
+
+	printf("# check if request is for api\n"); // could be done in parse	
 	// state
 	int is_api_request_ = (strncmp(req->path, "/api", 4) == 0); // use strncmp or a known cmp
 	#if 0
@@ -1853,39 +1960,20 @@ TODO: should we add keep-alive sockets?
 
 	if(is_api_request_) {
 		printf("# is api request == true\n");
-#if 0
-
-		size_t content_length = 0;
-
-		char * p = buffer; // buffer
-		char * content_length_header = strstr(p, "Content-Length:");
-		p = content_length_header + strlen("Content-Length:");
-	
-		int len = atoi(p);
-		printf("# Content-Length: %i\n", len);
-		if(len > 0) {
-			content_length = len;
-		}
-
-		// if its 0, then we might still want to handle the actual request
-		// since not all of them takes json data or other data
-		#if 0
-		if(len == 0) {
-			// something is probably wrong?
-			http_send_401(socket);
-			close(socket);
-			return;
-		}
-		#endif
-
-		// call api handler with method
-		char * content_ptr = (thread_request_buffer + req->request_size) - req->content_size;
-#endif
-		// handle_api_request(req->socket, 0/*http_method*/, path, has_cookie, token, buffer, content_ptr);
 		handle_api_request(req);
 		close(req->socket);
 		return;
 	}
+
+
+	// assume we handle regular files here
+	if(ext == NULL && mime_type == NULL) {
+		http_send_401(req->socket);
+		close(req->socket);
+		return;
+	}
+
+	printf(" ### prob regular file - check allowed access ###\n");
 
 	if(strcmp(req->method, "GET") == 0 && strcmp(req->path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
@@ -1915,137 +2003,17 @@ TODO: should we add keep-alive sockets?
 	}
 #endif
 
-// we do a lot of strcmp & strncmp
-// we also know that many of them are of a certain size (knwon)
-// PUT -> P U T
-// #define SPLIT_PUT	'P', 'U', 'T'
-// then we can use more specific cmp
-// #define STRCMP3(a, b) (a[0] == b[0] && a[1] == b[1] && a[2] == b[2])
-// #define STRCMP3(s, c0, c1, c2) (s[0] == c0 && s[1] == c1 && s[2] == c2)
-//	maybe using sub4 bytes is not great... add a ' ' to the c3? (without checking it)
-//
-// we also need to sanitize the method
-// if((ch < 'A' || ch > 'Z') && ch != '_' && ch != '-') { invalid!!! }
-//
-// maybe caching the filepath is not what we want.
-// it might be better to cache the actual http request instead?
-// 
-// maybe we can put in async io (posic aio.h) for stream reading files
 
-	// todo: make a testing platform for the api stuff
-	// 	build the http requests and test all apis
-	// routing plz
-	// if(strncmp(path, "/api", 4) == 0) {
-	//	handle_api_request();
-	// }
-
-#if 0
-	if(strcmp(method, "PUT") == 0 && strncmp(path, "/api", 4) == 0) {
-		printf("API CALL\n");
-		// API CALL maybe
-		// todo: build with json library
-		char * json_data = "{\"status\":\"ok\",\"data\":{\"uid\":\"00112233\",\"img\":\"/img/cat_black.jpg\"}}";
-		size_t json_len = strlen(json_data);
-
-		// http_send(socket, 200, "OK", "application/json", (uint8_t*)json_data, json_len);
-		char * cookie = "session_id=admin123";
-
-		http_send_wcookie(socket, 200, cookie, "application/json", (uint8_t*)json_data, json_len);
-		close(socket);
-		return;
-	}
-#endif
-
-	char * ext = NULL;
-	ext = get_ext(req->path);
-	if(ext == NULL) {
-		printf("API CALL\n");
-		// maybe its an api call...
-		// check that or fail
-		http_send_401(req->socket);
-		close(req->socket);
-		return;
-	}
-
-	ext++;
-	char * mime_type = get_mime_type(ext);
-	printf("MIME: %s -> %s\n", ext, mime_type);
-	if(mime_type == NULL) {
+	if(strlen(real_path) == 0) {
+	// if(_root_dir == NULL || _sub_dir == NULL || real_path[0] == 0) {
+		printf("SERVER FILE ERROR\n");
 		http_send_404(req->socket);
 		close(req->socket);
 		return;
 	}
 
-/*
-ROOT_DIR = "./www"
-ROOT_DIR + "/html/*.html"
-ROOT_DIR + "/css/*.css"
-ROOT_DIR + "/js/*.js"
-ROOT_DIR + "/img/*.jpeg"
-ROOT_DIR + "/img/*.png"
-ROOT_DIR + "/img/*.svg"
-*/
-
-	char * _root_dir = "www";
-	char * _sub_dir = NULL;
-	char real_path[1024];
-	if(strcmp(mime_type, "text/html") == 0) {
-		_sub_dir = "html";
-	}
-	/*
-	else if(strcmp(mime_type, "text/javascript") == 0) {
-		_sub_dir = "js";
-	}
-	else if(strcmp(mime_type, "text/css") == 0) {
-		_sub_dir = "css";
-	}
-	else if(strncmp(mime_type, "image/", 6) == 0) {
-		_sub_dir = "img";
-	} else {
-		send_response_404(socket);
-		close(socket);
-		return;
-	}
-	*/
-	if(_sub_dir != NULL) {
-		snprintf(real_path, sizeof(real_path) - 1, 
-			"%s/%s/%s", 
-			_root_dir,
-			_sub_dir,
-			req->path + 1);
-	} else {
-		snprintf(real_path, sizeof(real_path) - 1, 
-			"%s/%s", 
-			_root_dir,
-			req->path + 1);
-
-	}
-
-/*
-	if(_root_dir == NULL || _sub_dir == NULL || real_path[0] == 0) {
-		printf("ERROR\n");
-		send_response_404(socket);
-		close(socket);
-		return;
-	}
-*/
-
+	printf("# load and send file / resource\n");
 	load_and_send_file(req->socket, mime_type, real_path);	
-	
-#if 0
-	// response
-	char * response = 
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html\r\n"
-		"Connection: close\r\n"
-		"\r\n"
-		"<!DOCTYPE html>"
-		"<html><head><title>JATS - C HTTP Server</title></head>"
-		"<body><h1>Welcome to JATS<h1></br><p>Jensen Asset Tracking System<p></body>"
-		"</html>";
-
-	write(socket, response, strlen(response)); 
-#endif
 	close(req->socket);
 }
 

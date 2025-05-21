@@ -114,6 +114,7 @@ struct http_request_s {
 	char path[PATH_SIZE];
 	char http_version[HTTP_VERSION_SIZE];
 	
+	char * content_ptr; // body
 	char body[BODY_SIZE];
 	char headers[HEADERS_SIZE];
 	
