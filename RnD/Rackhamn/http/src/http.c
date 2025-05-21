@@ -1603,6 +1603,107 @@ int is_protected_path(char * path) {
 
 
 
+#if 1
+struct db_tag_s {
+	int id;
+	int area_id;
+	char code[16];
+	char desc[256];
+};
+typedef struct db_tag_s db_tag_t;
+
+struct db_user_s {
+	int id; 
+	char username[64];
+	char password[64];
+	char email[128];
+	char first_name[64];
+	char last_name[64];
+};
+typedef struct db_user_s db_user_t;
+
+
+int api_get_user(char * username, char * password, db_user_t * user) {
+	int rc = 0;
+	sqlite3 * db = NULL;
+	sqlite3_stmt * stmt = NULL;
+	char cmd_buf[1024] = { 0 };
+
+	snprintf(cmd_buf, 1023, 
+		"SELECT * FROM users WHERE (username == \"%s\");", 
+		username);
+
+	rc = sqlite3_open(DB_PATH_STR, &db);
+	if(rc != SQLITE_OK) {
+		printf("AAAAAAAAAAAA error\n");
+		return -1;
+	}
+	
+	rc = sqlite3_prepare_v2(db, cmd_buf, -1, &stmt, NULL);
+	if(rc != SQLITE_OK) {
+		sqlite3_close(db);
+		return -1;
+	}
+
+	if(sqlite3_step(stmt) == SQLITE_ROW) {
+		const char * str;
+
+		user->id = sqlite3_column_int(stmt, 0);
+
+		str = sqlite3_column_text(stmt, 1);
+		memcpy(user->username, str, strlen(str));
+
+		str = sqlite3_column_text(stmt, 2);
+		memcpy(user->password, str, strlen(str));
+
+		str = sqlite3_column_text(stmt, 3);
+		memcpy(user->email, str, strlen(str));
+		
+		str = sqlite3_column_text(stmt, 4);
+		memcpy(user->first_name, str, strlen(str));
+
+		str = sqlite3_column_text(stmt, 5);
+		memcpy(user->last_name, str, strlen(str));
+	}
+
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
+	return 0;	
+}
+
+int api_create_tag(db_tag_t tag) {
+	
+	return 0;
+}
+
+int api_update_tag(db_tag_t tag) {
+	
+	return 0;
+}
+
+int api_get_tags(db_tag_t * tags, int * count) {
+	
+	return 0;
+}
+
+void db_test_get_user() {
+		db_user_t user = { 0 };
+		int x = api_get_user("john_doe", NULL, &user);
+
+		printf("user:\n");
+		printf("id: %i\n", user.id);
+		printf("un: %s\n", user.username);
+		printf("pw: %s\n", user.password);
+		printf("em: %s\n", user.email);
+		printf("fn: %s\n", user.first_name);
+		printf("ln: %s\n", user.last_name);
+}
+
+
+#endif
+
+
 
 
 void handle_api_request(http_request_t * req) {
