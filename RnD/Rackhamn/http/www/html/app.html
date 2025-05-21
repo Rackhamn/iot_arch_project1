@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My SPA App</title>
+  <title>JATS - Jensen Asset Tracking System</title>
   <style>
     body {
       margin: 0;
@@ -29,18 +29,31 @@
     .active {
       display: block;
     }
+
+    table {
+      border-collapse: collapse;
+      width: 50%;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
   </style>
 </head>
 <body>
   <nav>
-    <a href="#home">Home</a>
-    <a href="#profile">Profile</a>
-    <a href="#logout">Logout</a>
+    <a href="#home" data-link>Home</a>
+    <a href="#profile" data-link>Profile</a>
+    <a href="#tags" data-link>Tags</a>
+    <a href="#logout" data-link>Logout</a>
   </nav>
 
   <div id="home" class="page">
     <h2>Home</h2>
-    <p>Welcome to the SPA!</p>
+    <p>Welcome to JATS!</p>
   </div>
 
   <div id="profile" class="page">
@@ -48,7 +61,22 @@
     <pre id="profile-data">Loading...</pre>
   </div>
 
+  <div id="tags" class="page">
+    <h2>Tags</h2>
+    <pre id="tag-data">Loading...</pre>
+  </div>
+
   <script>
+/*
+document.addEventListener("click", (e) => {
+	const link = e.target.closest("a");
+	if(link && link.matches("[data-link]")) {
+		e.preventDefault(); // gg
+		history.pushState(null, "", link.href);
+		handleRoute(link.pathname);
+	}
+});
+
     async function checkAuth() {
       // Ask server if user is authenticated (cookie will be sent automatically)
       const res = await fetch('https://your-api.com/auth/check', {
@@ -59,16 +87,28 @@
         window.location.href = 'login.html';
       }
     }
+*/
 
     async function loadProfile() {
+	    var obj = new Object;
+	    obj.get = "username";
       try {
-        const res = await fetch('https://your-api.com/profile', {
-          credentials: 'include'
+        const res = await fetch('/api/v1/user', {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
+          	credentials: 'include',
+		body: JSON.stringify(obj)
         });
         if (res.status === 401) {
           window.location.href = 'login.html';
           return;
         }
+	if(res.redirected) {
+		window.location.href = res.url;
+		return;
+	}
         const data = await res.json();
         document.getElementById('profile-data').textContent = JSON.stringify(data, null, 2);
       } catch (err) {
@@ -76,8 +116,69 @@
       }
     }
 
+    async function loadTags() {
+	    var obj = new Object;
+      try {
+        const res = await fetch('/api/v1/tags', {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
+          	credentials: 'include',
+		body: JSON.stringify(obj)
+        });
+        if (res.status === 401) {
+          window.location.href = 'login.html';
+          return;
+        }
+	if(res.redirected) {
+		window.location.href = res.url;
+		return;
+	}
+        const data = await res.json();
+        // document.getElementById('tag-data').textContent = JSON.stringify(data, null, 2);
+
+	  // Create table elements
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const tbody = document.createElement("tbody");
+
+  // Header row
+  const headerRow = document.createElement("tr");
+  ["ID", "Description"].forEach(text => {
+    const th = document.createElement("th");
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+
+  // Data rows
+  data.tags.forEach(tag => {
+    const row = document.createElement("tr");
+    const idCell = document.createElement("td");
+    idCell.textContent = tag.id;
+    const descCell = document.createElement("td");
+    descCell.textContent = tag.description;
+    row.appendChild(idCell);
+    row.appendChild(descCell);
+    tbody.appendChild(row);
+  });
+
+  // Build table
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  // Insert into DOM
+  document.getElementById("tag-data").textContent = "";
+  document.getElementById("tag-data").appendChild(table);
+
+      } catch (err) {
+        document.getElementById('tag-data').textContent = 'Failed to load tags.';
+      }
+    }
+
     async function logout() {
-      await fetch('https://your-api.com/logout', {
+      await fetch('/api/v1/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -96,6 +197,7 @@
       if (page) {
         page.classList.add('active');
         if (pageId === 'profile') loadProfile();
+	if (pageId === 'tags') loadTags();
       } else {
         showPage('home');
       }
@@ -108,7 +210,7 @@
 
     // Initial load
     (async () => {
-      await checkAuth(); // Redirect if session cookie is invalid
+      // await checkAuth(); // Redirect if session cookie is invalid
       const initialPage = location.hash.replace('#', '') || 'home';
       showPage(initialPage);
     })();

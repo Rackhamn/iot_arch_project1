@@ -97,9 +97,26 @@ struct user_s {
 };
 typedef struct user_s user_t;
 
+// each thread could keep a LRU table of logged in users
+struct login_entry_s {
+	unsigned long hash;
+	time_t created_at; // expiration
+	user_t user;
+	unsigned char token[TOKEN_SIZE]; 
+};
+typedef struct login_entry_s login_entry_t;
+
+struct login_hashtable_s {
+	int capacity;
+	int size;
+	login_entry_t * entry;
+};
+typedef struct login_hashtable_s login_ht_t;
+
 struct http_request_s {
 	int socket;
 
+	user_t * user;
 	int has_cookie;
 	int is_logged_in;
 	unsigned char token[TOKEN_SIZE];
@@ -123,7 +140,6 @@ struct http_request_s {
 };
 typedef struct http_request_s http_request_t;
 
-
 // HTTP Server Context Struct
 struct context_s {
 	int server_socket;
@@ -138,22 +154,6 @@ struct context_s {
 	char * root_dir; // relative to running directory!!!
 };
 typedef struct context_s context_t;
-
-// each thread could keep a LRU table of logged in users
-struct login_entry_s {
-	unsigned long hash;
-	time_t created_at; // expiration
-	user_t user;
-	unsigned char token[TOKEN_SIZE]; 
-};
-typedef struct login_entry_s login_entry_t;
-
-struct login_hashtable_s {
-	int capacity;
-	int size;
-	login_entry_t * entry;
-};
-typedef struct login_hashtable_s login_ht_t;
 
 enum HTTP_METHODS {
 	// idempotent: making the same request multiple times results in the same effect as making it once.
@@ -171,6 +171,7 @@ enum HTTP_METHODS {
 char * get_http_method_string(int http_method);
 size_t get_http_method_string_size(int http_method);
 char * get_mime_type(char * ext);
+user_t * get_user_entry_ptr(unsigned char * token);
 
 int extract_sessionid_token(char * buffer, unsigned char * token);
 

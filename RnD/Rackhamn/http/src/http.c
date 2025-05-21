@@ -312,6 +312,11 @@ pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t login_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// [ (R, W), ... ]
+static
+uint64_t trw_table[MAX_THREADS * 2] = { 0 };
+volatile unsigned int thread_index_counter = 0;
+
 void task_enqueue(int client) {
 	// printf("enqueue\n");
 	pthread_mutex_lock(&queue_mutex);
@@ -409,10 +414,30 @@ void mt_parse_http_request(http_request_t * req) {
 	req->has_cookie = extract_sessionid_token(thread_request_buffer, req->token);
 	if(req->has_cookie == 0) {
 		printf("mt_parse_http_request error - no cookie / token found!\n");
+		printf("Token: --(null)--\n");
+	} else {
+		printf("Token: --");
+		for(int i = 0; i < TOKEN_SIZE; i++) {
+			printf("%x", req->token[i]);
+		}
+		printf("--\n");		
+		printf("\n");
+
 	}
 
 	// might fail
 	req->content_ptr = buffer + req->request_size - req->content_size;
+
+	// check login
+	req->user = NULL;
+	req->is_logged_in = 0;
+	// printf("# check if user is logged in\n");
+	if(req->has_cookie) {
+		req->user = get_user_entry_ptr(req->token);
+		if(req->user != NULL) {
+			req->is_logged_in = 1;
+		}
+	}
 }
 
 int mt_read_http_request(http_request_t * req) {
@@ -430,7 +455,8 @@ int mt_read_http_request(http_request_t * req) {
 	size_t buffer_size = thread_request_buffer_size;
 	char * buffer = thread_request_buffer;
 	memset(thread_request_buffer, 0, thread_request_buffer_size);
-	
+
+	// do we need a timeout on the recv?	
 	int bytes_read = read(req->socket, buffer, buffer_size - 1);//sizeof(buffer) - 1);
 	if(bytes_read < 0) {
 		printf("client read error\n");
@@ -439,7 +465,10 @@ int mt_read_http_request(http_request_t * req) {
 	}
 	buffer[bytes_read] = '\0';
 	req->request_size = bytes_read;
-	
+
+	// printf("> read %li request bytes\n", req->request_size);
+	if(req->request_size == 0) return -1;
+
 	mt_parse_http_request(req);
 
 	return 0;
@@ -448,6 +477,11 @@ int mt_read_http_request(http_request_t * req) {
 
 void * worker(void * arg) {
 	thread_id = gettid();
+
+	const int tmp_id = thread_index_counter++;
+	trw_table[(tmp_id * 2) + 0] = 0;
+	trw_table[(tmp_id * 2) + 1] = 0;
+	
 
 	arena_create(&thread_json_arena, 8192);
 
@@ -485,6 +519,9 @@ void * worker(void * arg) {
 			printf("Err: in read_http_request()\n");
 			continue;
 		}
+
+		trw_table[(tmp_id * 2) + 0] += request.request_size;
+		// trw_table[(thread_id * 2) + 1] = 0;
 
 		handle_request(&request);	
 	}
@@ -542,6 +579,9 @@ int handle_cli_command(const char * cmd, size_t cmd_len) {
 	}
 	else if(strcmp(cmd, "status") == 0) {
 		printf("[CLI] Server is running...\n");
+		for(int i = 0; i < MAX_THREADS; i++) {
+			printf("thread %i has read %lu bytes\n", i, trw_table[(i * 2) + 0]);
+		}
 	} 
 	else if(strcmp(cmd, "quit") == 0) {
 		printf("[CLI] quit command recv.!\n");
@@ -1305,10 +1345,9 @@ const char * users[3] = {
 	"dog"
 };
 
+// this maybe should aug the request
 int handle_logout(char token[TOKEN_SIZE]) {
 	printf("attempt logout!\n");
-
-	// arena_clear(&thread_json_arena);
 
 	pthread_mutex_lock(&login_mutex);
 
@@ -1439,7 +1478,7 @@ void handle_login(int socket, char token[TOKEN_SIZE], char * json_data) {
 	// build json for sending
 	// json -> redirect_location = "/mypage.html"
 
-	char * json_out_data = "{\"redirect_location\":\"/mypage.html\"}";
+	char * json_out_data = "{\"redirect_location\":\"/app.html\"}";
 
 	printf("send wcookie\n");
 	// "sessionID=XYZ; Path=/; HttpOnly; SameSite=Strict; Secure;"
@@ -1549,7 +1588,7 @@ user_t * get_user_entry_ptr(unsigned char * token) {
 
 int is_protected_path(char * path) {
 	// we should really compare against a loaded file with the list of whitelisted resources
-#define _CMP(p) (strncmp(path, p, STRLEN(p) + 1) == 0)
+#define _CMP(p) (memcmp(path, p, STRLEN(p)) == 0)
 
 	if(_CMP("/index.html")) return 1;
 	if(_CMP("/mypage.html")) return 1;
@@ -1560,8 +1599,12 @@ int is_protected_path(char * path) {
 	return 0;
 }
 
-// thread_response_buffer, thread_request_buffer
-//void handle_api_request(int socket, int method, char * req_path, int has_cookie, unsigned char * token, char * buffer, char * json_in_data) {
+
+
+
+
+
+
 void handle_api_request(http_request_t * req) {
 	printf(" ### handle api request X ###\n");
 
@@ -1605,14 +1648,17 @@ void handle_api_request(http_request_t * req) {
 		printf("API V1 LOGIN\n");
 		handle_login(req->socket, req->token, json_in_data);
 		return;
-	} /* else {
-		if(!has_cookie) {
-			// user is not trying to login
-			// forcibly redirect to login.html
-			http_send_302(socket, "/login.html");
-		}
-	} */
+	} 
+	
+	if(!req->is_logged_in) {
+		printf("[API] unauth access attempt - redirect to login\n");
+		// user is not trying to login
+		// forcibly redirect to login.html
+		http_send_302(req->socket, "/login.html");
+		return;
+	}
 
+#if 0
 	printf("lock login 2\n");
 	pthread_mutex_lock(&login_mutex);
 
@@ -1640,11 +1686,12 @@ void handle_api_request(http_request_t * req) {
 
 	printf("unlock login 2\n");
 	pthread_mutex_unlock(&login_mutex);
+#endif
 
 	printf(" ### handle actual api request ###\n");
 
 	// handle actual requests
-	login_entry_t * session_ptr = &login_ht.entry[index];
+	// login_entry_t * session_ptr = &login_ht.entry[index];
 
 	// to parse request by json
 	// arena_clear(&thread_json_arena); 
@@ -1656,7 +1703,11 @@ void handle_api_request(http_request_t * req) {
 	//
 	// it seems like the mutex is still locked but i dont know...
 
-	printf("########## method: %s\n", req->method);
+	json_result_t result = json_parse(&thread_json_arena, json_in_data);
+
+	// if(memcmp(req->path, "/api/v1/user", STRLEN("/api/v1/user")) == 0) {
+		// mt_handle_api_v1_post_user(req);
+
 	int http_method = get_http_method_from_string(req->method);
 	switch(http_method) {
 		// should never be used btw - js disallows it. use POST instead
@@ -1669,27 +1720,27 @@ void handle_api_request(http_request_t * req) {
 		case POST:
 			printf(" > API: POST\n");
 
-		// {"get":["username"]}
-		printf("API get stuff from user with JSON\n");
-
-		json_result_t result = json_parse(&thread_json_arena, json_in_data);
-
 		if(strcmp(req->path, "/api/v1/logout") == 0) {
 			printf(" > api logout\n");
 
 			int rval = handle_logout(req->token);
-			if(rval) {
-				http_send_401(req->socket);
-				return;
-			} else {
-				char * del_cookie = "sessionID=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; HttpOnly; SameSite=Strict; Secure";
-				size_t del_len = strlen(del_cookie);
-				// http_wcookie(socket, 200, deleted_cookie, 0, NULL, del_len);
-				http_send_wcookie(req->socket, 200, del_cookie, NULL, NULL, 0);
+			if(rval != 0) {
+				// something went wrong - handle it
+				// http_send_401(req->socket);
+				// return;
 			}
-		}
 
+			static const char * del_cookie = "sessionID=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; HttpOnly; SameSite=Strict; Secure";
+			// size_t del_len = strlen(del_cookie);
+			// http_wcookie(socket, 200, deleted_cookie, 0, NULL, del_len);
+			http_send_wcookie(req->socket, 200, (char*)del_cookie, NULL, NULL, 0);
+			return;
+		}
+	
+		// {"get":["username"]}
 		if(strcmp(req->path, "/api/v1/user") == 0) {
+			
+			printf("API get stuff from user with JSON\n");
 			printf(" > attempt to bullshit\n");
 
 			json_value_t * to_get = json_find_by_path(result.root, "get");
@@ -1700,7 +1751,8 @@ void handle_api_request(http_request_t * req) {
 
 				if(strcmp(to_get->string.chars, "username") == 0) {
 					// build json response or something
-					char * username = session_ptr->user.username;
+					// char * username = session_ptr->user.username;
+					char * username = req->user->username;
 
 					json_value_t * obj = json_make_object(&thread_json_arena);
 			        	json_object_add(&thread_json_arena, obj, 
@@ -1731,8 +1783,29 @@ void handle_api_request(http_request_t * req) {
 					printf("get %s\n", val->string.chars);
 				}
 			}
-
 		}
+
+		if(strcmp(req->path, "/api/v1/tags") == 0) {
+			printf("api tags\n");
+
+			char * fake = "{}";
+			if(strcmp(req->user->username, "admin") == 0) {
+				fake = "{\"tags\":[{\"id\":\"AABBCC\",\"description\":\"A Tag\"},{\"id\":\"EEFF00\",\"description\":\"Another Tag\"}]}";
+			}
+
+			if(strcmp(req->user->username, "cat") == 0) {
+				fake = "{\"tags\":[{\"id\":\"FF00FF\",\"description\":\"A Cat Tag\"},{\"id\":\"EDFFBA\",\"description\":\"Catnip in a bag\"}]}";
+			}
+
+			if(strcmp(req->user->username, "dog") == 0) {
+				fake = "{\"tags\":[{\"id\":\"BB00FF\",\"description\":\"A Bowl\"},{\"id\":\"EDEDED\",\"description\":\"Bag of food - 20KG\"}]}";
+			}
+
+			http_send(req->socket, 200, "application/json", (uint8_t*)fake, strlen(fake));
+			return;
+		}
+
+		break;
 	}
 
 	#if 0
@@ -1879,33 +1952,6 @@ ROOT_DIR + "/img/*.svg"
 	printf("file path: %s\n", real_path);
 #endif
 
-
-	// store this in the request?
-	int logged_in = 0;
-	user_t * user = NULL;
-
-	// help dump token	
-	if(req->has_cookie) {
-		printf("Token: --");
-		for(int i = 0; i < TOKEN_SIZE; i++) {
-			printf("%x", req->token[i]);
-		}
-		printf("--\n");		
-		printf("\n");
-	} else {
-		printf("Token: --(null)---\n");
-	}
-
-	printf("# check if user is logged in\n");
-	if(req->has_cookie) {
-		user = get_user_entry_ptr(req->token);
-		if(user != NULL) {
-			logged_in = 1;
-		} else {
-			logged_in = 0;
-		}
-	}
-
 	printf("# check if resource is protected\n");
 	// if the req->path is public access 
 	// (js, login.html, style.css, cat-image?)
@@ -1918,7 +1964,7 @@ ROOT_DIR + "/img/*.svg"
 	// 		else
 	// 			send 401
 	if(is_protected_path(req->path) == 1) {
-		if(user == NULL) {	
+		if(req->is_logged_in == 0 || req->user == NULL) {	
 			http_send_302(req->socket, "/login.html");
 			close(req->socket);
 			return;
