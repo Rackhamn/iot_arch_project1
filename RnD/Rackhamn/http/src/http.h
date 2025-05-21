@@ -35,6 +35,37 @@
 
 // -----
 
+// For controlling the http_request struct size
+#ifndef TOKEN_SIZE
+#define TOKEN_SIZE	32
+#endif
+
+#ifndef METHOD_SIZE
+#define METHOD_SIZE	16
+#endif
+
+#ifndef PATH_SIZE
+#define PATH_SIZE	128
+#endif
+
+#ifndef BODY_SIZE
+#define BODY_SIZE	1024
+#endif
+
+#ifndef HEADERS_SIZE
+#define HEADERS_SIZE	1024
+#endif
+
+#ifndef FILE_PATH_SIZE
+#define FILE_PATH_SIZE	1024
+#endif
+
+#ifndef HTTP_VERSION_SIZE
+#define HTTP_VERSION_SIZE	16
+#endif
+
+// -----
+
 #ifndef PORT
 #define PORT			8080
 #endif
@@ -58,6 +89,38 @@
 
 // -----
 
+// from DB
+struct user_s {
+	char username[64];
+	char password_hash[128];
+	unsigned int id; // db.user_id
+};
+typedef struct user_s user_t;
+
+struct http_request_s {
+	int socket;
+
+	int has_cookie;
+	int is_logged_in;
+	unsigned char token[TOKEN_SIZE];
+
+	size_t request_size;
+	size_t content_size;
+
+	// http request data info
+	// should be pointers instead
+	// or string(offset, length) structs
+	char method[METHOD_SIZE];
+	char path[PATH_SIZE];
+	char http_version[HTTP_VERSION_SIZE];
+	
+	char body[BODY_SIZE];
+	char headers[HEADERS_SIZE];
+	
+	// for resources, is the lit. filesystem path
+	char file_path[FILE_PATH_SIZE];
+};
+typedef struct http_request_s http_request_t;
 
 
 // HTTP Server Context Struct
@@ -74,6 +137,22 @@ struct context_s {
 	char * root_dir; // relative to running directory!!!
 };
 typedef struct context_s context_t;
+
+// each thread could keep a LRU table of logged in users
+struct login_entry_s {
+	unsigned long hash;
+	time_t created_at; // expiration
+	user_t user;
+	unsigned char token[TOKEN_SIZE]; 
+};
+typedef struct login_entry_s login_entry_t;
+
+struct login_hashtable_s {
+	int capacity;
+	int size;
+	login_entry_t * entry;
+};
+typedef struct login_hashtable_s login_ht_t;
 
 enum HTTP_METHODS {
 	// idempotent: making the same request multiple times results in the same effect as making it once.
@@ -92,7 +171,11 @@ char * get_http_method_string(int http_method);
 size_t get_http_method_string_size(int http_method);
 char * get_mime_type(char * ext);
 
-void handle_request(int socket); 
+int extract_sessionid_token(char * buffer, unsigned char * token);
+
+void handle_request(http_request_t * req); 
+// void handle_api_request(int socket, int method, char * req_path, int has_cookie, unsigned char * token, char * buffer, char * json_in_data)
+void handle_api_request(http_request_t * req);
 
 int run_server();
 

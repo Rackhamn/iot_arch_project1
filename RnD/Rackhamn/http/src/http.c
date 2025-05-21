@@ -16,7 +16,7 @@
 #include <sys/syscall.h>
 #include <stdarg.h>
 #include <getopt.h> // lib?
-
+#include <ctype.h> // for hexencode/hexdecode
 #include <sqlite3.h>
 #define DB_PATH_STR "../../Gabbemannen00/updated_database.db" 
 
@@ -221,7 +221,7 @@ const unsigned char favicon_icox[] = {
 #ifndef HEX_CODEC_H
 #define HEX_CODEC_H
 
-#include <ctype.h>
+// for N bytes in, N*2 bytes will be encoded
 void hex_encode(char * out, unsigned char * in, size_t len) {
 	const char hex[] = "0123456789ABCDEF";
 	for(size_t i = 0; i < len; i++) {
@@ -235,6 +235,7 @@ void hex_encode(char * out, unsigned char * in, size_t len) {
 	((isdigit(x)) ? x - '0' : \
 	(isxdigit(x)) ? (tolower(x) - 'a' + 10) : 255)
 
+// for N bytes in, then N/2 will be written to
 int hex_decode(unsigned char * out, size_t out_len, char * hex) {
 	size_t i = 0;
 
@@ -270,12 +271,11 @@ int hex_decode(unsigned char * out, size_t out_len, char * hex) {
 
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
-// glibc hasnt added a weapper for gettid on my system...
+// glibc hasnt added a wrapper for gettid on my system...
 // so we now have to do this.
 pid_t gettid(void) {
 	return syscall(SYS_gettid);
 }
-
 
 //TODO: 
 //	create struct thread_context_s please.
@@ -289,11 +289,6 @@ pid_t gettid(void) {
 // TODO: make struct thread_ctx plz
 __thread pid_t thread_id;
 
-// TODO: remove per-thread sha256
-// its only used on login and instansiated for runtime only
-__thread SHA256_CTX thread_sha256_ctx;
-__thread uint8_t thread_hash[32];
-
 // TODO: this should be somewhere else i think...
 // (part of the request buffer maybe?)
 // altough who knows...
@@ -303,7 +298,6 @@ __thread char * thread_request_buffer;
 __thread size_t thread_request_buffer_size;
 __thread char * thread_response_buffer;
 __thread size_t thread_response_buffer_size;
-
 
 // TODO: store into struct plz
 // 	we just store socket file descriptors (signed 32-bit integers) in it!
@@ -315,10 +309,8 @@ int task_count = 0;
 volatile sig_atomic_t running = 1;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
-// pthread_barrier_t barrier;
 
 pthread_mutex_t login_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t login_cond = PTHREAD_COND_INITIALIZER;
 
 void task_enqueue(int client) {
 	// printf("enqueue\n");
@@ -368,11 +360,88 @@ int task_dequeue() {
 	return client;
 }
 
+
+void mt_parse_http_request(http_request_t * req) {
+	char * buffer = thread_request_buffer;
+#if 1
+	// dump request - use verbose flags!
+	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
+	printf("%s\n", buffer);
+	printf(" ### CLIENT REQUEST : END ###\n");
+#endif
+
+	int has_cookie = 0;
+	unsigned char token[128] = { 0 };
+
+	// not safe - plz do an actual parse
+	// use known cmp for method
+	// use whitespace to parse for request path
+	// 	also handle %xx into ascii char. what about utf8?
+	// use until CLRF to parse for http version
+	sscanf(buffer, "%s %s %s", req->method, req->path, req->http_version);
+	printf("method: %s\n", req->method);
+	printf("path: %s\n", req->path);
+	printf("version: %s\n", req->http_version);
+
+	
+	// read the total len of the request content body
+	size_t content_length = 0;
+	char * content_length_header = strstr(buffer, "Content-Length:");
+	if(content_length_header != NULL) {
+		char * p = content_length_header + strlen("Content-Length:");
+
+		int len = atoi(p);
+		printf("# Content-Length: %i\n", len);
+		if(len > 0) {
+			content_length = len;
+		}
+	}
+	req->content_size = content_length;
+
+	/*
+	req->headers = buffer + (strlen(req->method) + strlen(
+	req->body = 
+	*/
+	// char * content_ptr = thread_request_buffer + req->request_size - req->content_size;
+	req->has_cookie = extract_sessionid_token(thread_request_buffer, req->token);
+	if(req->has_cookie == 0) {
+		printf("mt_parse_http_request error - no cookie / token found!\n");
+	}
+}
+
+int mt_read_http_request(http_request_t * req) {
+	if(req->socket <= 0) {
+		printf("client socket error!\n");
+		return -1;
+	}
+
+	// todo: move into static memory per thread
+	// 	like 8MB or something
+	// 	plus one for the output
+	// maybe this size has to be bigger?
+	// or in an incrementing buffer?
+	// char buffer[BUFFER_SIZE] = { 0 };
+	size_t buffer_size = thread_request_buffer_size;
+	char * buffer = thread_request_buffer;
+	memset(thread_request_buffer, 0, thread_request_buffer_size);
+	
+	int bytes_read = read(req->socket, buffer, buffer_size - 1);//sizeof(buffer) - 1);
+	if(bytes_read < 0) {
+		printf("client read error\n");
+		close(req->socket);
+		return -1;
+	}
+	buffer[bytes_read] = '\0';
+	req->request_size = bytes_read;
+	
+	mt_parse_http_request(req);
+
+	return 0;
+}
+
+
 void * worker(void * arg) {
 	thread_id = gettid();
-
-	sha256_init(&thread_sha256_ctx);
-	memset(thread_hash, 0, sizeof(thread_hash[0]) * 32);
 
 	arena_create(&thread_json_arena, 8192);
 
@@ -392,21 +461,24 @@ void * worker(void * arg) {
 	}
 	memset(thread_response_buffer, 0, thread_response_buffer_size);
 
-	/*
-	sha256_init(&sha_ctx);
-	sha256_update(&sha_ctx, (const uint8_t *)sha_input, sha_input_len);
-	sha256_final(&sha_ctx, hash);
-	*/
-
 	printf("Thread Worker Start: %i\n", thread_id);
+
+	int status = 0;
 	while(1) {
-		int client = task_dequeue();
-		
-		if(client < 0) {
+		http_request_t request = { 0 };
+		request.socket = task_dequeue();
+
+		if(request.socket < 0) {
 			break;
 		}
 
-		handle_request(client);		
+		status = mt_read_http_request(&request);
+		if(status != 0) {
+			printf("Err: in read_http_request()\n");
+			continue;
+		}
+
+		handle_request(&request);	
 	}
 
 	arena_destroy(&thread_json_arena);
@@ -423,10 +495,6 @@ void * worker(void * arg) {
 		thread_response_buffer_size = 0;
 	}
 
-#if 0
-	printf("Thread await barrier: %i\n", tid);
-	pthread_barrier_wait(&barrier);
-#endif
 	printf("Thread Worker End: %i\n", thread_id);
 	return NULL;
 }
@@ -923,6 +991,12 @@ void http_send_200(int socket) {
 	hprintf(socket, "HTTP/1.1 200 OK\r\n\r\n");
 }
 
+void http_send_302(int socket, char * redirect_location) {
+	hprintf(socket, "HTTP/1.1, 302 Found\r\n");
+	hprintf(socket, "Location: %s\r\n", redirect_location);
+	hprintf(socket, "Content-Length: 0\r\nConnection: close\r\n\r\n");
+}
+
 void http_send_401(int socket) {
 	hprintf(socket, "HTTP/1.1 401 Bad Request\r\n\r\n");
 }
@@ -1028,45 +1102,6 @@ char * get_ext(char * str) {
 
 	return final_period;	
 }
-
-// todo: write this out pls
-struct http_request_s {
-	// data ptr
-	char * data;
-	int base_offset;
-};
-
-
-
-
-
-
-
-
-// from DB
-struct user_s {
-	char username[64];
-	char password_hash[128];
-	unsigned int id; // db.user_id
-};
-typedef struct user_s user_t;
-
-
-// each thread could keep a LRU table of logged in users
-struct login_entry_s {
-	unsigned long hash;
-	time_t created_at; // expiration
-	user_t user;
-	unsigned char token[32]; 
-};
-typedef struct login_entry_s login_entry_t;
-
-struct login_hashtable_s {
-	int capacity;
-	int size;
-	login_entry_t * entry;
-};
-typedef struct login_hashtable_s login_ht_t;
 
 // global
 login_ht_t login_ht;
@@ -1262,7 +1297,7 @@ const char * users[3] = {
 	"dog"
 };
 
-int handle_logout(char token[32]) {
+int handle_logout(char token[TOKEN_SIZE]) {
 	printf("attempt logout!\n");
 
 	// arena_clear(&thread_json_arena);
@@ -1270,7 +1305,7 @@ int handle_logout(char token[32]) {
 	pthread_mutex_lock(&login_mutex);
 
         // check if logged in - move into handle requests and block access / redirect if not allowed
-        unsigned long hash = hash_djb2(token, 32);
+        unsigned long hash = hash_djb2(token, TOKEN_SIZE);
         int index = login_ht_get_hash_index(&login_ht, hash);
         if(index < 0) {
                 pthread_mutex_unlock(&login_mutex);
@@ -1285,7 +1320,7 @@ int handle_logout(char token[32]) {
 	return rval;
 }
 
-void handle_login(int socket, char token[32], char * json_data) {
+void handle_login(int socket, char token[TOKEN_SIZE], char * json_data) {
 	arena_clear(&thread_json_arena);
 
 	// TODO: move this json parse into the handle_api_request instead
@@ -1352,7 +1387,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 	unsigned long hash = 0;
 	int index = 0;
 
-	hash = hash_djb2(token, 32);
+	hash = hash_djb2(token, TOKEN_SIZE);
 	printf("# hash = %08lX\n", hash);
 	
 	index = login_ht_get_hash_index(&login_ht, hash);
@@ -1364,7 +1399,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 
 	if(index >= 0) {
 		login_ht.entry[index].hash = hash;
-		memcpy(login_ht.entry[index].token, token, 32);
+		memcpy(login_ht.entry[index].token, token, TOKEN_SIZE);
 
 		user_t user = { 0 };
 		memcpy(user.username, 
@@ -1383,7 +1418,7 @@ void handle_login(int socket, char token[32], char * json_data) {
 	char cookie[512] = "sessionID=";
 	
 	char token_hex[128] = { 0 };
-	hex_encode(token_hex, token, 32);
+	hex_encode(token_hex, token, TOKEN_SIZE);
 
 	size_t hex_len = strlen(token_hex);
 	// memcpy(cookie + 10, token_hex, hex_len);
@@ -1403,8 +1438,6 @@ void handle_login(int socket, char token[32], char * json_data) {
 	http_send_wcookie(socket, 200, cookie, "application/json", json_out_data, strlen(json_out_data));
 	printf("handled login!\n");
 }
-
-
 
 int extract_sessionid_token(char * buffer, unsigned char * token) {
 	char * cookie_header = strstr(buffer, "Cookie:");
@@ -1429,7 +1462,6 @@ int extract_sessionid_token(char * buffer, unsigned char * token) {
 	if(len == 0) {
 		return 0;
 	}
-	// if(len > 32) len = 32;
 
 	// grab the shit
 	char hex[128] = { 0 };
@@ -1437,17 +1469,12 @@ int extract_sessionid_token(char * buffer, unsigned char * token) {
 		hex[i] = session_start[i];
 	}
 #if 1
-	int l1 = hex_decode(token, 32, hex);
+	int l1 = hex_decode(token, TOKEN_SIZE, hex);
 	printf("hex decoded bytes: %i\n", l1);
 	if(l1 == -1) {
 		printf("HEX DECODE ERROR\n");
 	}
 #endif
-	/*
-	for(int i = 0; i < len; i++) {
-		token[i] = session_start[i];
-	}
-	*/
 
 	return 1;
 }
@@ -1458,7 +1485,7 @@ int is_logged_in(unsigned char * token) {
 	pthread_mutex_lock(&login_mutex);
 
         // check if logged in - move into handle requests and block access / redirect if not allowed
-        unsigned long hash = hash_djb2(token, 32);
+        unsigned long hash = hash_djb2(token, TOKEN_SIZE);
         int index = login_ht_get_hash_index(&login_ht, hash);
         if(index < 0) {
                 pthread_mutex_unlock(&login_mutex);
@@ -1475,7 +1502,7 @@ login_entry_t * get_session_ptr(unsigned char * token, unsigned long hash) {
 		if(token == NULL) {
 			return NULL;
 		}
-		hash = hash_djb2(token, 32);
+		hash = hash_djb2(token, TOKEN_SIZE);
 	}
 	
 	pthread_mutex_lock(&login_mutex);
@@ -1494,72 +1521,85 @@ login_entry_t * get_session_ptr(unsigned char * token, unsigned long hash) {
 }
 
 // thread_response_buffer, thread_request_buffer
-void handle_api_request(int socket, int method, char * req_path, char * buffer, char * json_in_data) {
-	printf("handle api request\n");
+//void handle_api_request(int socket, int method, char * req_path, int has_cookie, unsigned char * token, char * buffer, char * json_in_data) {
+void handle_api_request(http_request_t * req) {
+	printf(" ### handle api request X ###\n");
 
 	// should already have been done!!!!
 	// figure out which action/ route to take
 	int api_version = 0;
 
+	// bad alias
 	char * in_buf = thread_request_buffer;
 	char * out_buf = thread_response_buffer;
+	char * json_in_data = (thread_request_buffer + req->request_size) - req->content_size;
 
 	if(json_in_data == NULL) {
-		http_send_401(socket);
-		close(socket);
+		http_send_401(req->socket);
+		close(req->socket);
 		return;
 	}
 
-	int has_cookie = 0;
+	// int has_cookie = 0;
 	unsigned char token_hex[128] = { 0 };
-	unsigned char token[64] = { 0 };
+	// unsigned char token[64] = { 0 };
 
 	// grab the sessionID data from the request buffer - not safe
 	// cookie = "sessionID="
-	
-	has_cookie = extract_sessionid_token(buffer, token);
-	if(has_cookie) {
+
+	#if 0	
+	//has_cookie = extract_sessionid_token(buffer, token);
+	if(req->has_cookie) {
 		printf("Token: --");
-		for(int i = 0; i < 32; i++) {
-			printf("%x", token[i]);
+		for(int i = 0; i < TOKEN_SIZE; i++) {
+			printf("%x", req->token[i]);
 		}
 		printf("--\n");		
 		printf("\n");
 	}
+	#endif
 	
-	if(strncmp(req_path, "/api/v1/login", 13) == 0) {
+	if(strncmp(req->path, "/api/v1/login", 13) == 0) {
 		printf("API V1 LOGIN\n");
-		handle_login(socket, token, json_in_data);
+		handle_login(req->socket, req->token, json_in_data);
 		return;
-	}
+	} /* else {
+		if(!has_cookie) {
+			// user is not trying to login
+			// forcibly redirect to login.html
+			http_send_302(socket, "/login.html");
+		}
+	} */
 
 	printf("lock login 2\n");
 	pthread_mutex_lock(&login_mutex);
 
 	// check if logged in - move into handle requests and block access / redirect if not allowed
-	unsigned long hash = hash_djb2(token, 32);
+	unsigned long hash = hash_djb2(req->token, TOKEN_SIZE);
 	int index = login_ht_get_hash_index(&login_ht, hash);
 	if(index < 0) {
-		printf("unlock login 2\n");
+		printf("unlock login 2 (a)\n");
 		pthread_mutex_unlock(&login_mutex);
 
-		http_send_401(socket);
+		http_send_401(req->socket);
 		return;
 	}
 
-	if(memcmp(login_ht.entry[index].token, token, 32) == 0) {
+	if(memcmp(login_ht.entry[index].token, req->token, TOKEN_SIZE) == 0) {
 		char * username = login_ht.entry[index].user.username;
 		printf("user '%s' is logged in, cont. handling request!\n", username);
 	} else {		
-		printf("unlock login 2\n");
+		printf("unlock login 2 (b)\n");
 		pthread_mutex_unlock(&login_mutex);
 
-		http_send_401(socket);
+		http_send_401(req->socket);
 		return;
 	}
 
 	printf("unlock login 2\n");
 	pthread_mutex_unlock(&login_mutex);
+
+	printf(" ### handle actual api request ###\n");
 
 	// handle actual requests
 	login_entry_t * session_ptr = &login_ht.entry[index];
@@ -1574,36 +1614,41 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 	//
 	// it seems like the mutex is still locked but i dont know...
 
-	switch(method) {
+	printf("########## method: %s\n", req->method);
+	int http_method = get_http_method_from_string(req->method);
+	switch(http_method) {
 		// should never be used btw - js disallows it. use POST instead
 		case GET:
-
+			printf(" > API: GET\n");
 		break;
 		case PUT:
-
+			printf(" > API: PUT\n");
 		break;
 		case POST:
+			printf(" > API: POST\n");
+
 		// {"get":["username"]}
 		printf("API get stuff from user with JSON\n");
 
 		json_result_t result = json_parse(&thread_json_arena, json_in_data);
 
-		if(strcmp(req_path, "/api/v1/logout") == 0) {
-			printf("api logout\n");
+		if(strcmp(req->path, "/api/v1/logout") == 0) {
+			printf(" > api logout\n");
 
-			int rval = handle_logout(token);
+			int rval = handle_logout(req->token);
 			if(rval) {
-				http_send_401(socket);
+				http_send_401(req->socket);
+				return;
 			} else {
 				char * del_cookie = "sessionID=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; HttpOnly; SameSite=Strict; Secure";
 				size_t del_len = strlen(del_cookie);
 				// http_wcookie(socket, 200, deleted_cookie, 0, NULL, del_len);
-				http_send_wcookie(socket, 200, del_cookie, NULL, NULL, 0);
+				http_send_wcookie(req->socket, 200, del_cookie, NULL, NULL, 0);
 			}
 		}
 
-		if(strcmp(req_path, "/api/v1/user") == 0) {
-			printf("attempt to bullshit\n");
+		if(strcmp(req->path, "/api/v1/user") == 0) {
+			printf(" > attempt to bullshit\n");
 
 			json_value_t * to_get = json_find_by_path(result.root, "get");
 
@@ -1630,7 +1675,7 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 					size_t output_size = 0;
 					output = json_write(&thread_json_arena, result, &output_size);
 					
-					http_send(socket, 200, "application/json", (uint8_t*)output, output_size);
+					http_send(req->socket, 200, "application/json", (uint8_t*)output, output_size);
 					// close(socket);
 					return;
 				}
@@ -1676,7 +1721,7 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 	}
 	#endif
 
-	http_send_200(socket);
+	http_send_200(req->socket);
 #if 0
 	printf("HELP\n");
 
@@ -1694,7 +1739,36 @@ void handle_api_request(int socket, int method, char * req_path, char * buffer, 
 }
 
 // file request - standard OK for all
-void handle_request(int socket) {
+void handle_request(http_request_t * req) {
+/*
+TODO:
+	remake the handle_request function
+	so that the website actually works
+	then also update the handle_api_request func
+	
+TODO: should we add keep-alive sockets?
+	needs a timeout
+	and a maximum requests 
+
+
+> done before this function
+1. 	read and parse request
+1.2. 	check if IP is blacklisted or not
+
+> done before this function
+2.	parse cookie and session info
+	find the user and fetch it / ptr
+
+
+
+3.	check path for public / protected resource
+3.2.	check for per-user permissions (admin)
+
+4. 	handle api endpoints
+
+5. 	serve static files or app content
+
+*/
 	printf("handle request\n");
 
 	// todo: assert before entering the handle_client call
@@ -1702,57 +1776,11 @@ void handle_request(int socket) {
 		printf("client socket error!\n");
 		return;
 	}
-	// todo: move into static memory per thread
-	// 	like 8MB or something
-	// 	plus one for the output
-	// maybe this size has to be bigger?
-	// or in an incrementing buffer?
-	// char buffer[BUFFER_SIZE] = { 0 };
-	size_t buffer_size = thread_request_buffer_size;
-	char * buffer = thread_request_buffer;
-	memset(thread_request_buffer, 0, thread_request_buffer_size);
-	
-	int bytes_read = read(socket, buffer, buffer_size - 1);//sizeof(buffer) - 1);
-	if(bytes_read < 0) {
-		printf("client read error\n");
-		close(socket);
-		return;
-	}
-	buffer[bytes_read] = '\0';
 
-#if 1
-	// dump request - use verbose flags!
-	printf("\n ### CLIENT REQUEST : BEGIN ###\n");
-	printf("%s\n", buffer);
-	printf(" ### CLIENT REQUEST : END ###\n");
-#endif
-
-	// do before handle_request and handle_api_request
-	// expose to next function.
-	char method[16] = { 0 };
-	char path[512] = { 0 };
-	char version[16] = { 0 };
-	char file_path[1024] = { 0 };
-
-	// not safe - plz do an actual parse
-	// use known cmp for method
-	// use whitespace to parse for request path
-	// 	also handle %xx into ascii char. what about utf8?
-	// use until CLRF to parse for http version
-	sscanf(buffer, "%s %s %s", method, path, version);
-	printf("method: %s\n", method);
-	printf("path: %s\n", path);
-	printf("version: %s\n", version);
-
-	// the order of operations here is wrong
-	// TODO: handle request should split out all the necessary data
-	// and check the path against the protected/open lists
-	// then if its in protected, check auth, then respond
-	// if its open, just respond
 #if 0
 	printf("AAA\n");
 	// check if logged in here
-	char session_token[32] = { 0 };
+	char session_token[TOKEN_SIZE] = { 0 };
 	int auth = 0;
 	login_entry_t * session_ptr = NULL;
 
@@ -1772,8 +1800,48 @@ void handle_request(int socket) {
 	printf("DDD\n");
 #endif
 
+	// cookie is really irrevelant
+	// question is wheter or not that matches a login token
+	// has_cookie = extract_sessionid_token(buffer, token);
+	if(req->has_cookie) {
+		printf("Token: --");
+		for(int i = 0; i < TOKEN_SIZE; i++) {
+			printf("%x", req->token[i]);
+		}
+		printf("--\n");		
+		printf("\n");
+	} else {
+		printf("Token: --(null)---\n");
+		// no cookie
+		// check with whitelist here
+
+#if 0
+		// shitty non-working gate
+		if(strncmp(req->path, "/login.html", 11) != 0) {
+		// if(strncmp(path, "/api/v1/login", 13 != 0)) {
+			http_send_302(req->socket, "/login.html");
+		}
+#endif
+	}
+	
+#if 0
+	if(strncmp(req_path, "/api/v1/login", 13) == 0) {
+		printf("API V1 LOGIN\n");
+		handle_login(socket, token, json_in_data);
+		return;
+	} else {
+		if(!has_cookie) {
+			// user is not trying to login
+			// forcibly redirect to login.html
+			http_send_302(socket, "/login.html");
+		}
+	}
+#endif
+
+	char * buffer = thread_request_buffer;
+	
 	// state
-	int is_api_request_ = (strncmp(path, "/api", 4) == 0); // use strncmp or a known cmp
+	int is_api_request_ = (strncmp(req->path, "/api", 4) == 0); // use strncmp or a known cmp
 	#if 0
 	int http_method = get_http_method_from_string(method);
 	if(http_method == -1) {
@@ -1785,10 +1853,11 @@ void handle_request(int socket) {
 
 	if(is_api_request_) {
 		printf("# is api request == true\n");
+#if 0
 
 		size_t content_length = 0;
 
-		char * p = buffer;
+		char * p = buffer; // buffer
 		char * content_length_header = strstr(p, "Content-Length:");
 		p = content_length_header + strlen("Content-Length:");
 	
@@ -1810,17 +1879,19 @@ void handle_request(int socket) {
 		#endif
 
 		// call api handler with method
-		char * eorp = (buffer + bytes_read) - content_length;
-		handle_api_request(socket, 0/*http_method*/, path, buffer, eorp);
-		close(socket);
+		char * content_ptr = (thread_request_buffer + req->request_size) - req->content_size;
+#endif
+		// handle_api_request(req->socket, 0/*http_method*/, path, has_cookie, token, buffer, content_ptr);
+		handle_api_request(req);
+		close(req->socket);
 		return;
 	}
 
-	if(strcmp(method, "GET") == 0 && strcmp(path, "/favicon.ico") == 0) {
+	if(strcmp(req->method, "GET") == 0 && strcmp(req->path, "/favicon.ico") == 0) {
 		printf("SEND FAVICON!\n");
-		http_send(socket, 200, "image/x-icon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
+		http_send(req->socket, 200, "image/x-icon", (uint8_t*)favicon_icox, sizeof(favicon_icox));
 		printf("FAVICON SENT!\n");
-		close(socket);
+		close(req->socket);
 		return;
 	}
 
@@ -1886,13 +1957,13 @@ void handle_request(int socket) {
 #endif
 
 	char * ext = NULL;
-	ext = get_ext(path);
+	ext = get_ext(req->path);
 	if(ext == NULL) {
 		printf("API CALL\n");
 		// maybe its an api call...
 		// check that or fail
-		http_send_401(socket);
-		close(socket);
+		http_send_401(req->socket);
+		close(req->socket);
 		return;
 	}
 
@@ -1900,8 +1971,8 @@ void handle_request(int socket) {
 	char * mime_type = get_mime_type(ext);
 	printf("MIME: %s -> %s\n", ext, mime_type);
 	if(mime_type == NULL) {
-		http_send_404(socket);
-		close(socket);
+		http_send_404(req->socket);
+		close(req->socket);
 		return;
 	}
 
@@ -1941,12 +2012,12 @@ ROOT_DIR + "/img/*.svg"
 			"%s/%s/%s", 
 			_root_dir,
 			_sub_dir,
-			path + 1);
+			req->path + 1);
 	} else {
 		snprintf(real_path, sizeof(real_path) - 1, 
 			"%s/%s", 
 			_root_dir,
-			path + 1);
+			req->path + 1);
 
 	}
 
@@ -1959,7 +2030,7 @@ ROOT_DIR + "/img/*.svg"
 	}
 */
 
-	load_and_send_file(socket, mime_type, real_path);	
+	load_and_send_file(req->socket, mime_type, real_path);	
 	
 #if 0
 	// response
@@ -1975,7 +2046,7 @@ ROOT_DIR + "/img/*.svg"
 
 	write(socket, response, strlen(response)); 
 #endif
-	close(socket);
+	close(req->socket);
 }
 
 void db_test(void) {
@@ -2180,10 +2251,6 @@ int main(int argc, char ** argv) {
 	printf("root-dir (path) = \"%s\" + \"%s\"\n", _cwd, ctx.root_dir);
 	// TODO: set cwd to rel_root_dir plz
 	// then we dont have to audit/build all files into a really long path
-
-
-
-
 
 	init_login_ht();
 
