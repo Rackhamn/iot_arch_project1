@@ -177,7 +177,7 @@ except OSError:
 #------------------------------------------------------------------------------------------
 
 SSID = "" # add wifi username inside the quotation marks
-PASSWORD = "" # to the same with the password
+PASSWORD = "" # do the same with the password
 
 # Creating Wi-Fi-object
 wlan = network.WLAN(network.STA_IF)
