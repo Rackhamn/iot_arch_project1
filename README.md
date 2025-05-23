@@ -23,7 +23,8 @@ A Reader/Writer pair for RFID tags.
 ## Failures and lessons:  
 All of our planned features did not make it into the codebase before the final day.  
 We did not get the implement a custom mesh network, add discrepancies and automatic logging or database backups...  
-
+We learned a little too late that the SQLite database was not suited for multi-threaded and multi-connection reads and writes at the same time for our development machine (running linux).  
+  
 We did get to implement the system in both Python and in C.  
 We got to build drivers for LCD display and NFC/RFID readers.  
 We got to use the WiFi capability of the Pico W and connect over TCP to multiple handmade servers (C) and a flask server (Python).  
