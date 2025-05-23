@@ -1,23 +1,10 @@
 # JATS - Jensen Asset Tracking Solution
 
-For our 3-month long IoT Architecture course at Jensen YH (2025)  
-We are 7 members.  
-### Stockholm:
-* Carl Blumenthal (Rackhamn)
-* Mojtaba Mohseni (Mohsen-png)
-* Swathi xxx (swati72-t2)
-* Gabriel xxx (Gabbemannen00)
-### Malmö:
-* Martin af Uhr (stormtomten)
-* Denize S. (Que-ctrl)
+For a two part and 3-month long IoT Architecture course at Jensen YH (2025)  
 
 # Project Information
 _Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals._
   
-## Plan
-Initial Meeting: 2025-01-21, 17:00 _done_    
-Meeting log: https://docs.google.com/document/d/1dKvJOzCxKPIAF0xGJFeyn81T_Q298DL61lQWgLDmnBw/edit?usp=sharing  
-
 ### Basic Architecture Idea:  
 A main server with a database + user website.  
 A Mesh network of pico connected active RFID tags. 
