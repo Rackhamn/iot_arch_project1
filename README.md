@@ -24,6 +24,11 @@ A Reader/Writer pair for RFID tags.
 All of our planned features did not make it into the codebase before the final day.  
 We did not get the implement a custom mesh network, add discrepancies and automatic logging or database backups...  
 
+We did get to implement the system in both Python and in C.  
+We got to build drivers for LCD display and NFC/RFID readers.  
+We got to use the WiFi capability of the Pico W and connect over TCP to multiple handmade servers (C) and a flask server (Python).  
+We did (somewhat begrudgingly) got to work with JS, HTML and other Web frontends while with working on out HTTP server (C).  
+  
 Even with the loss of 4 out of 7 of the original team, the rest of the team managed to pull together and get *really* close to a fully functional build before the final.  
 If we had had one more working day (about 4-8 hours), the team believes that the project would have been able to launch as a real product. (Or could *atleast* be treated as a closed beta)  
 
