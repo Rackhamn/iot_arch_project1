@@ -10,13 +10,17 @@ The goal of the system was to help small hotels, apartments and similar accomoda
 In short, we stated the goal as the following:  
 * ```Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals.```
   
+Each contributor had their own directory for pushing their specific codes and tests.  
+That directory is ```/RnD/$username```  
+The plan was that the final build would be combined and placed into ```/src/```, altough, that did not end up happening.  
+  
 ### Basic Architecture Idea:   
 A main server with a database + user website.  
 A Mesh network of pico connected active RFID tags.  
 It should configure itself and choose one as Master (that interacts with the server and runs commands)   
 A set of passive RFID tags read by the mesh network.  
 A Reader/Writer pair for RFID tags.  
-
+  
 ### Pictures of the final design and solution:  
 * put pictures here
   
@@ -29,6 +33,9 @@ We did get to implement the system in both Python and in C.
 We got to build drivers for LCD display and NFC/RFID readers.  
 We got to use the WiFi capability of the Pico W and connect over TCP to multiple handmade servers (C) and a flask server (Python).  
 We did (somewhat begrudgingly) got to work with JS, HTML and other Web frontends while with working on out HTTP server (C).  
+  
+Because we used a per-contributor folder for their own code we had difficulty moving everything into the ```/src/``` directory properly.  
+Perhaps it would have been a lot easier if we did not separete the development in such a way, but instead had used a single monorepo with a directory for each feature or something similar...  
   
 Even with the loss of 4 out of 7 of the original team, the rest of the team managed to pull together and get *really* close to a fully functional build before the final.  
 If we had had one more working day (about 4-8 hours), the team believes that the project would have been able to launch as a real product. (Or could *atleast* be treated as a closed beta)  
