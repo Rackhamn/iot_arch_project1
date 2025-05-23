@@ -12,13 +12,21 @@ In short, we stated the goal as the following:
   
 ### Basic Architecture Idea:   
 A main server with a database + user website.  
-A Mesh network of pico connected active RFID tags. 
+A Mesh network of pico connected active RFID tags.  
 It should configure itself and choose one as Master (that interacts with the server and runs commands)   
 A set of passive RFID tags read by the mesh network.  
 A Reader/Writer pair for RFID tags.  
 
 ### Pictures of the final design and solution:  
 * put pictures here
+  
+## Failures and lessons:  
+All of our planned features did not make it into the codebase before the final day.  
+We did not get the implement a custom mesh network, add discrepancies and automatic logging or database backups...  
+
+Even with the loss of 4 out of 7 of the original team, the rest of the team managed to pull together and get *really* close to a fully functional build before the final.  
+If we had had one more working day (about 4-8 hours), the team believes that the project would have been able to launch as a real product. (Or could *atleast* be treated as a closed beta)  
+
   
 <br/><br/><br/><br/>
 
