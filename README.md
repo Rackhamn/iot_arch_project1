@@ -2,36 +2,23 @@
 
 For a two part and 3-month long IoT Architecture course at Jensen YH (2025)  
 
-# Project Information
-_Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals._
+# Background  
+We were tasked with designing and implementing a IoT and Embedded system.  
+As a group we ended up choosing to create an asset tracking system based on rfid tags.  
+The goal of the system was to help small hotels, apartments and similar accomodations to keep track of their assets after every checkout.  
+
+In short, we stated the goal as the following:  
+* ```Designing a system assisting housekeeping and supervisors with post-checkout control for short-term apartment rentals.```
   
-### Basic Architecture Idea:  
+### Basic Architecture Idea:   
 A main server with a database + user website.  
 A Mesh network of pico connected active RFID tags. 
 It should configure itself and choose one as Master (that interacts with the server and runs commands)   
 A set of passive RFID tags read by the mesh network.  
 A Reader/Writer pair for RFID tags.  
 
-
-### Update:  
-_We are going to have to change our original architecture idea slightly._ :thinking:
-_Instead of having an active RF reader in every room that communicates with the RFID tags, we are going to have a RFID reader module that a person can use to scan all the tags in a room._
-_Each read will be sent through our mesh network that in turn speaks to the server._
-
-_It might be best to have a split architecture._  
-_One with the basic passive RFID tags where we use a reader module._  
-_One with the active RFID tags that we try to read once every N seconds. Need to find a working antenna though + think about power consumtion._  
-  
-## Details
-Plans and details to follow :smiley:  
-If you are pushing your own code for personal or testing purposes, put that code in the folder `"RnD/$git-username/..."`  
-Once we are in the real building stage, put your code & tests into `"src/..."` and `"src/unit_test/..."`  
-  > TODO: Add Continuous Integration with github workflows & cmake for the PRs
-  
-## Resources
-[Link Example](http://google.com)  
-[Github .md helper](https://gist.github.com/allysonsilva/85fff14a22bbdf55485be947566cc09e)  
-[ARMv6-M PDF](https://developer.arm.com/documentation/ddi0419/latest/)  
+### Pictures of the final design and solution:  
+* put pictures here
   
 <br/><br/><br/><br/>
 
