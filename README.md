@@ -30,7 +30,9 @@ If we had had one more working day (about 4-8 hours), the team believes that the
   
 <br/><br/><br/><br/>
 
-### Quick-Fix Code Graph For Presentation
+# Here follows multiple designs and architecture mockups made for this specific system.
+
+### Simplex Example
 ```mermaid
 graph TD;
     %% subgraph Pico W Example
@@ -387,10 +389,10 @@ stateDiagram-v2
 
 ## Note on the RFID Reader/Writer Modules
 ```
-Model: HW-126, [@Que-ctrl]
+Model: HW-126, 
 SDA    SCK    MOSI    MISO    IRQ    GND    RST    3.3V
 
-Model: WPI405, TC-9927144, [@Rackhamn, @Gabbemannen00]
+Model: WPI405, TC-9927144, 
 IRQ    NSS*    SCK    MOSI    MISO    GND     RST    VCC**
     *NSS=SDA
     **VCC=3.3V
